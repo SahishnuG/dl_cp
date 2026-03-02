@@ -1,9 +1,77 @@
-## How to run
-uv sync  
-uv pip uninstall torch  
-uv pip install torch --index-url https://download.pytorch.org/whl/cu121  
-uv pip install torchvision --index-url https://download.pytorch.org/whl/cu121  
-uv run --no-sync python main.py  
+# Karmafit Backend
+
+## Project Overview
+
+Karmafit is an intelligent resume analysis and candidate screening platform. The backend leverages advanced OCR (Optical Character Recognition) and deep learning technologies to automatically extract structured data from resumes in multiple formats and provide candidate evaluation insights.
+
+## Features
+
+- **Multi-Format Resume Processing**: Supports PDF, DOCX, TXT, and image files
+- **Advanced OCR**: Uses GOT-OCR 2.0 model for accurate text extraction from resumes
+- **GPU Acceleration**: CUDA support for fast model inference
+- **Structured Data Extraction**: Converts unstructured resume content into analyzable data
+- **Flexible Architecture**: Modular design with configurable settings and helper functions
+
+## Tech Stack
+
+- **Language**: Python 3.10+
+- **Deep Learning Framework**: PyTorch with CUDA 12.1 support
+- **OCR Model**: GOT-OCR 2.0 (Hugging Face)
+- **Transformers**: Hugging Face Transformers library
+- **File Processing**: 
+  - pdf2image (PDF to image conversion)
+  - python-docx (Word document parsing)
+  - Pillow (Image manipulation)
+- **Package Manager**: uv (fast Python package manager)
+
+## Project Structure
+
+```
+backend/
+├── main.py              # Main entry point for resume processing
+├── pyproject.toml       # Project dependencies and configuration
+├── README.md            # This file
+├── config/
+│   ├── settings.py      # Configuration and model initialization
+│   └── __pycache__/     # Python cache
+├── src/
+│   ├── helper_funcs.py  # File conversion and utility functions
+│   ├── cuda_test.py     # CUDA availability testing
+│   └── __pycache__/     # Python cache
+└── output_images/       # Directory for converted resume images
+```
+
+## How to Run
+
+1. **Install dependencies**:
+   ```
+   uv sync
+   ```
+
+2. **Install PyTorch with CUDA support** (Windows):
+   ```
+   uv pip uninstall torch
+   uv pip install torch --index-url https://download.pytorch.org/whl/cu121
+   uv pip install torchvision --index-url https://download.pytorch.org/whl/cu121
+   ```
+
+3. **Run the application**:
+   ```
+   uv run --no-sync python main.py
+   ```
 
 ## Troubleshooting
-change poppler path in helper_funcs.py line 28
+
+**uv not installed**:
+   ```
+   pip install uv
+   ```
+
+**poppler not installed**:
+   - Download from: https://github.com/oschwartz10612/poppler-windows/releases/download/v25.12.0-0/Release-25.12.0-0.zip
+   - Extract and note the installation path
+
+**wrong poppler path**:
+   - Update the poppler path in src/helper_funcs.py line 28
+   - Change: `poppler_path=r"D:\Program Files\poppler-25.12.0\Library\bin"`
+   - Or delete the `poppler_path` parameter if poppler is already in your system PATH
