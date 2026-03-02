@@ -9,17 +9,27 @@ def read_resume(resume_path):
     print(f"Using device: {device}\nmodel: {model.__class__.__name__}\nprocessor: {processor.__class__.__name__}")
     print(f"Processing file: {resume_path}")
     image = convert_to_image(resume_path)
-    inputs = processor(image, return_tensors="pt", device=device).to(device)
+    #image = "output_images/test.png"
+    inputs = processor(
+    image,
+    return_tensors="pt",
+    format=True
+    ).to(model.device)
 
     generate_ids = model.generate(
-        **inputs,
-        do_sample=False,
-        # tokenizer=processor.tokenizer,
-        # stop_strings="<|im_end|>",
-        max_new_tokens=4096,
+    **inputs,
+    tokenizer=processor.tokenizer,
+    stop_strings="<|im_end|>",
+    do_sample=False,
+    max_new_tokens=2048,
     )
 
-    result = processor.decode(generate_ids[0], skip_special_tokens=True)
+    #print(generate_ids)
+    
+    result = processor.decode(
+        generate_ids[0, inputs["input_ids"].shape[1]:],
+        skip_special_tokens=True
+    )
     return result
 
 if __name__ == "__main__":

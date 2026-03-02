@@ -5,6 +5,7 @@ description = "Resume OCR backend using GOT-OCR"
 requires-python = ">=3.10"
 
 dependencies = [
+#    "torch==2.3.1+cu121",
     "transformers @ git+https://github.com/huggingface/transformers.git",
     "accelerate>=0.30.0",
     "pillow>=10.0.0",
@@ -13,4 +14,5 @@ dependencies = [
     "dotenv"
 ]
 
-# pytorch = "https://download.pytorch.org/whl/cu121"
+# [tool.uv]
+# extra-index-url = ["https://download.pytorch.org/whl/cu121"]

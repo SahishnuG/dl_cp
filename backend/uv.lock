@@ -1367,7 +1367,7 @@ wheels = [
 [[package]]
 name = "transformers"
 version = "5.3.0.dev0"
-source = { git = "https://github.com/huggingface/transformers.git#11b1906d5c0dae39c13270e47cc02c4cde70e548" }
+source = { git = "https://github.com/huggingface/transformers.git#c4dd81800ae37cfd0e88628c56d59cc6f074d23f" }
 dependencies = [
     { name = "huggingface-hub" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
