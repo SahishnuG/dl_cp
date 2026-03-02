@@ -14,12 +14,12 @@ def read_resume(resume_path):
     generate_ids = model.generate(
         **inputs,
         do_sample=False,
-        tokenizer=processor.tokenizer,
-        stop_strings="<|im_end|>",
+        # tokenizer=processor.tokenizer,
+        # stop_strings="<|im_end|>",
         max_new_tokens=4096,
     )
 
-    result = processor.decode(generate_ids[0, inputs["input_ids"].shape[1]:], skip_special_tokens=True)
+    result = processor.decode(generate_ids[0], skip_special_tokens=True)
     return result
 
 if __name__ == "__main__":
