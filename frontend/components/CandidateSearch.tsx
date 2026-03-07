@@ -1,51 +1,80 @@
 "use client";
 
+import type { FormEvent, MouseEvent } from "react";
 import { useState } from "react";
 import { useAuth } from "@clerk/nextjs";
-import CandidateReport from "./CandidateReport";
+import CandidateReport, { type CandidateProfile } from "./CandidateReport";
+
+interface SearchResult {
+  candidate_id: string;
+  username: string;
+  name: string;
+  analysis: Omit<CandidateProfile, "id">;
+}
 
 export default function CandidateSearch() {
   const [candidateId, setCandidateId] = useState("");
-  const [candidate, setCandidate] = useState<any>(null);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [selectedCandidate, setSelectedCandidate] = useState<CandidateProfile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const { getToken } = useAuth();
 
-  const handleSearch = async (e?: React.FormEvent) => {
+  const setSpotlight = (event: MouseEvent<HTMLFormElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    event.currentTarget.style.setProperty("--spot-x", `${event.clientX - rect.left}px`);
+    event.currentTarget.style.setProperty("--spot-y", `${event.clientY - rect.top}px`);
+  };
+
+  const handleSearch = async (e?: FormEvent) => {
     if (e) e.preventDefault();
 
     if (!candidateId.trim()) return;
 
     setIsLoading(true);
     setError("");
+    setSearchResults([]);
+    setSelectedCandidate(null);
 
     try {
       const token = await getToken();
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       
-      const response = await fetch(`${apiUrl}/api/candidates/search?q=${encodeURIComponent(candidateId)}`, {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      });
+      const response = await fetch(
+        `${apiUrl}/api/candidates/search?q=${encodeURIComponent(candidateId)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (!response.ok) {
         if (response.status === 404) {
-          setError("Candidate not found");
-          setCandidate(null);
+          setError("No candidates found");
+          setSearchResults([]);
         } else {
           throw new Error("Failed to search candidate");
         }
       } else {
-        const data = await response.json();
-        setCandidate({
-          id: data.candidate_id,
-          ...data.analysis,
-        });
+        const data = (await response.json()) as {
+          results: SearchResult[];
+          count: number;
+        };
+        setSearchResults(data.results);
+        
+        // Auto-select if only one result
+        if (data.results.length === 1) {
+          setSelectedCandidate({
+            id: data.results[0].candidate_id,
+            ...data.results[0].analysis,
+          });
+        }
       }
-    } catch (err: any) {
-      setError(err.message || "An error occurred while searching");
-      setCandidate(null);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An error occurred while searching";
+      setError(message);
+      setSearchResults([]);
     } finally {
       setIsLoading(false);
     }
@@ -53,104 +82,133 @@ export default function CandidateSearch() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-indigo-600 to-pink-600 dark:from-indigo-400 dark:to-pink-400 bg-clip-text text-transparent">
+        <p className="label-mono mb-2">Recruiter Tools</p>
+        <h1 className="mb-2 bg-gradient-to-b from-white via-white/95 to-white/70 bg-clip-text text-3xl font-semibold tracking-tight text-transparent sm:text-4xl">
           Candidate Search
         </h1>
-        <p className="text-slate-600 dark:text-slate-400">
+        <p className="text-[var(--foreground-muted)]">
           Find and analyze candidate profiles
         </p>
       </div>
 
-      {/* Search Section */}
-      <div className="group relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-pink-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-lg" />
+      <form onSubmit={handleSearch} onMouseMove={setSpotlight} className="ui-card ui-spotlight p-6 sm:p-8">
+        <div className="relative z-[3]">
+          <label className="mb-3 block text-sm font-semibold text-[var(--foreground)]">Search Candidates</label>
 
-        <form
-          onSubmit={handleSearch}
-          className="relative bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-300 hover:shadow-xl"
-        >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-indigo-500 to-pink-500 opacity-5 rounded-full -mr-16 -mt-16" />
-
-          <div className="relative z-10">
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
-              Search by Candidate ID
-            </label>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex-1 relative">
-                <input
-                  type="text"
-                  placeholder="Enter candidate ID (e.g., C001)"
-                  value={candidateId}
-                  onChange={(e) => setCandidateId(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-slate-50 placeholder:text-slate-500 dark:placeholder:text-slate-400 transition-all"
-                />
-              </div>
-
-              <button
-                onClick={() => handleSearch()}
-                disabled={isLoading || !candidateId.trim()}
-                className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-pink-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Searching...
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                      />
-                    </svg>
-                    Search
-                  </>
-                )}
-              </button>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="Search by ID, username, or name..."
+                value={candidateId}
+                onChange={(e) => setCandidateId(e.target.value)}
+                className="ui-input"
+              />
             </div>
 
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-              💡 Tip: Use candidate IDs like C001, C002, etc.
-            </p>
+            <button
+              onClick={() => handleSearch()}
+              disabled={isLoading || !candidateId.trim()}
+              className="ui-btn-primary min-w-36 px-6 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isLoading ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Searching...
+                </>
+              ) : (
+                "Search"
+              )}
+            </button>
           </div>
-        </form>
-      </div>
 
-      {/* Results Section */}
-      {candidate && (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <CandidateReport candidate={candidate} />
+          <p className="mt-2 text-xs text-[var(--foreground-muted)]">Search by candidate ID, username, or name (partial matches supported).</p>
+        </div>
+      </form>
+
+      {searchResults.length > 0 && !selectedCandidate && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-white">
+              Found {searchResults.length} {searchResults.length === 1 ? "candidate" : "candidates"}
+            </h2>
+          </div>
+          
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {searchResults.map((result) => {
+              const classification = result.analysis.classification || "Unknown";
+              const score = result.analysis.score || 0;
+              
+              return (
+                <button
+                  key={result.candidate_id}
+                  onClick={() => setSelectedCandidate({ id: result.candidate_id, ...result.analysis })}
+                  className="ui-card group cursor-pointer p-5 text-left transition-all hover:scale-[1.02]"
+                >
+                  <div className="mb-3 flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-white">{result.name}</h3>
+                      <p className="text-sm text-[var(--foreground-muted)]">@{result.username}</p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-white">{score}</div>
+                      <div className="text-xs text-[var(--foreground-muted)]">Score</div>
+                    </div>
+                  </div>
+                  
+                  <div className="mb-3">
+                    <span
+                      className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${
+                        classification === "Strong Fit"
+                          ? "bg-emerald-500/20 text-emerald-300"
+                          : classification === "Trainable Fit"
+                          ? "bg-amber-500/20 text-amber-300"
+                          : "bg-rose-500/20 text-rose-300"
+                      }`}
+                    >
+                      {classification}
+                    </span>
+                  </div>
+                  
+                  <p className="text-sm text-[var(--foreground-muted)]">
+                    {result.analysis.position || "No position specified"}
+                  </p>
+                  
+                  <div className="mt-3 flex items-center gap-2 text-sm text-[var(--accent)]">
+                    <span>View Full Report</span>
+                    <span className="transition-transform group-hover:translate-x-1">→</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
-      {/* Error State */}
-      {error && !candidate && (
-        <div className="text-center py-12">
-          <div className="text-4xl mb-4">❌</div>
-          <p className="text-red-600 dark:text-red-400">
-            {error}
-          </p>
+      {selectedCandidate && (
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {searchResults.length > 1 && (
+            <button
+              onClick={() => setSelectedCandidate(null)}
+              className="ui-btn-secondary px-4 py-2 text-sm"
+            >
+              ← Back to Results
+            </button>
+          )}
+          <CandidateReport candidate={selectedCandidate} />
         </div>
       )}
 
-      {/* Empty State */}
-      {!candidate && !isLoading && !error && candidateId && (
-        <div className="text-center py-12">
-          <div className="text-4xl mb-4">🔍</div>
-          <p className="text-slate-600 dark:text-slate-400">
-            No candidate found. Try a different ID.
-          </p>
+      {error && searchResults.length === 0 && !selectedCandidate && (
+        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-300">
+          {error}
+        </div>
+      )}
+
+      {!selectedCandidate && !isLoading && !error && candidateId && searchResults.length === 0 && (
+        <div className="ui-card p-6 text-center text-sm text-[var(--foreground-muted)]">
+          No candidates found. Try a different search term.
         </div>
       )}
     </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import type { MouseEvent } from "react";
+
 export default function DashboardStats() {
   // Replace with backend API call later
   const data = {
@@ -9,12 +11,19 @@ export default function DashboardStats() {
     risky: 25,
   };
 
+  const setSpotlight = (event: MouseEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    event.currentTarget.style.setProperty("--spot-x", `${event.clientX - rect.left}px`);
+    event.currentTarget.style.setProperty("--spot-y", `${event.clientY - rect.top}px`);
+  };
+
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-indigo-600 to-pink-600 dark:from-indigo-400 dark:to-pink-400 bg-clip-text text-transparent">
+      <p className="label-mono mb-3">Recruiter Workspace</p>
+      <h1 className="mb-2 bg-gradient-to-b from-white via-white/95 to-white/75 bg-clip-text text-3xl font-semibold tracking-tight text-transparent sm:text-4xl">
         Dashboard
       </h1>
-      <p className="text-slate-600 dark:text-slate-400 mb-8">
+      <p className="mb-8 text-[var(--foreground-muted)]">
         Overview of your recruitment pipeline
       </p>
 
@@ -24,28 +33,32 @@ export default function DashboardStats() {
           value={data.total}
           icon="📋"
           gradient="from-indigo-500 to-indigo-600"
-          iconBg="from-indigo-100 to-indigo-200 dark:from-indigo-900 dark:to-indigo-800"
+          iconBg="from-[#5e6ad2]/25 to-[#6872d9]/15"
+          setSpotlight={setSpotlight}
         />
         <StatCard
           title="Strong Fit"
           value={data.strong}
           icon="⭐"
           gradient="from-emerald-500 to-emerald-600"
-          iconBg="from-emerald-100 to-emerald-200 dark:from-emerald-900 dark:to-emerald-800"
+          iconBg="from-emerald-500/25 to-emerald-500/10"
+          setSpotlight={setSpotlight}
         />
         <StatCard
           title="Trainable Fit"
           value={data.trainable}
           icon="🎯"
           gradient="from-amber-500 to-amber-600"
-          iconBg="from-amber-100 to-amber-200 dark:from-amber-900 dark:to-amber-800"
+          iconBg="from-amber-500/25 to-amber-500/10"
+          setSpotlight={setSpotlight}
         />
         <StatCard
           title="Risky Fit"
           value={data.risky}
           icon="⚠️"
           gradient="from-rose-500 to-rose-600"
-          iconBg="from-rose-100 to-rose-200 dark:from-rose-900 dark:to-rose-800"
+          iconBg="from-rose-500/25 to-rose-500/10"
+          setSpotlight={setSpotlight}
         />
       </div>
     </div>
@@ -58,52 +71,45 @@ function StatCard({
   icon,
   gradient,
   iconBg,
+  setSpotlight,
 }: {
   title: string;
   value: number;
   icon: string;
   gradient: string;
   iconBg: string;
+  setSpotlight: (event: MouseEvent<HTMLDivElement>) => void;
 }) {
   return (
-    <div className="group relative">
-      {/* Gradient border */}
-      <div
-        className={`absolute inset-0 bg-gradient-to-r ${gradient} rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-lg`}
-      />
+    <div onMouseMove={setSpotlight} className="ui-card ui-spotlight group p-6">
+      <div className="absolute right-[-52px] top-[-52px] h-28 w-28 rounded-full bg-gradient-to-br from-white/10 to-transparent blur-xl" />
 
-      <div className="relative bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-300 hover:shadow-xl overflow-hidden">
-        {/* Background accent */}
+      <div className="relative z-[3]">
         <div
-          className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${gradient} opacity-5 rounded-full -mr-16 -mt-16`}
-        />
-
-        <div className="relative z-10">
-          {/* Icon */}
-          <div
-            className={`w-14 h-14 rounded-xl bg-gradient-to-br ${iconBg} flex items-center justify-center text-2xl mb-4`}
-          >
-            {icon}
-          </div>
-
-          {/* Title and Value */}
-          <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">
-            {title}
-          </h3>
-          <p className={`text-3xl font-bold bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}>
-            {value}
-          </p>
-
-          {/* Progress indicator */}
-          <div className="mt-4 h-1 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-            <div
-              className={`h-full bg-gradient-to-r ${gradient} transition-all duration-500`}
-              style={{
-                width: `${((value % 120) / 120) * 100}%`,
-              }}
-            />
-          </div>
+          className={`mb-4 flex h-14 w-14 items-center justify-center rounded-xl border border-white/10 bg-gradient-to-br ${iconBg} text-2xl shadow-[inset_0_1px_0_0_rgba(255,255,255,0.15)]`}
+        >
+          {icon}
         </div>
+
+        <h3 className="mb-2 text-sm font-medium text-[var(--foreground-muted)]">
+          {title}
+        </h3>
+        <p className={`text-3xl font-semibold bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}>
+          {value}
+        </p>
+
+        <div className="mt-4 h-1 overflow-hidden rounded-full bg-white/10">
+          <div
+            className={`h-full bg-gradient-to-r ${gradient} transition-all duration-500`}
+            style={{
+              width: `${((value % 120) / 120) * 100}%`,
+            }}
+          />
+        </div>
+
+        <p className="mt-3 label-mono">
+            {title}
+          </p>
       </div>
     </div>
   );

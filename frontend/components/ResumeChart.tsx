@@ -1,99 +1,89 @@
 "use client";
 
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import type { MouseEvent } from "react";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+
+type ChartRow = {
+  name: string;
+  value: number;
+};
+
+type TooltipPayloadRow = {
+  name: string;
+  value: number;
+};
+
+type TooltipProps = {
+  active?: boolean;
+  payload?: TooltipPayloadRow[];
+};
+
+function ChartTooltip({ active, payload }: TooltipProps) {
+  if (!active || !payload || payload.length === 0) {
+    return null;
+  }
+
+  const row = payload[0];
+
+  return (
+    <div className="rounded-lg border border-white/10 bg-[#0b0b0e]/95 p-3 shadow-[0_10px_30px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+      <p className="text-sm font-medium text-[var(--foreground)]">{row.name}</p>
+      <p className="text-xs text-[var(--foreground-muted)]">Count: {row.value}</p>
+      <p className="text-xs font-medium text-[var(--foreground)]">{((row.value / 120) * 100).toFixed(1)}%</p>
+    </div>
+  );
+}
 
 export default function ResumeChart() {
-  const data = [
+  const data: ChartRow[] = [
     { name: "Strong Fit", value: 45 },
     { name: "Trainable Fit", value: 50 },
     { name: "Risky Fit", value: 25 },
   ];
 
-  const COLORS = [
-    "#10b981", // emerald
-    "#f59e0b", // amber
-    "#ef4444", // rose
-  ];
+  const colors = ["#10b981", "#f59e0b", "#ef4444"];
 
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-lg">
-          <p className="font-medium text-slate-900 dark:text-slate-50">
-            {payload[0].name}
-          </p>
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            Count: {payload[0].value}
-          </p>
-          <p className="text-sm font-medium text-slate-900 dark:text-slate-50">
-            {((payload[0].value / 120) * 100).toFixed(1)}%
-          </p>
-        </div>
-      );
-    }
-    return null;
+  const setSpotlight = (event: MouseEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    event.currentTarget.style.setProperty("--spot-x", `${event.clientX - rect.left}px`);
+    event.currentTarget.style.setProperty("--spot-y", `${event.clientY - rect.top}px`);
   };
 
   return (
-    <div className="group relative">
-      {/* Gradient border */}
-      <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-lg" />
+    <div onMouseMove={setSpotlight} className="ui-card ui-spotlight p-6 sm:p-8">
+      <div className="relative z-[3]">
+        <p className="label-mono mb-2">Classification Overview</p>
+        <h2 className="mb-2 bg-gradient-to-b from-white via-white/95 to-white/70 bg-clip-text text-2xl font-semibold tracking-tight text-transparent">
+          Resume Classification
+        </h2>
+        <p className="mb-6 text-sm text-[var(--foreground-muted)]">Breakdown of candidate fit distribution across the current pool.</p>
 
-      <div className="relative bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-300 hover:shadow-xl overflow-hidden">
-        <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 opacity-5 rounded-full -mr-20 -mt-20" />
-
-        <div className="relative z-10">
-          <h2 className="text-2xl font-bold mb-2 bg-gradient-to-r from-indigo-600 to-pink-600 dark:from-indigo-400 dark:to-pink-400 bg-clip-text text-transparent">
-            Resume Classification
-          </h2>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
-            Breakdown of candidate fit classifications
-          </p>
-
-          <div className="flex flex-col lg:flex-row items-center justify-center gap-8">
-            <ResponsiveContainer width="100%" height={300}>
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-center">
+          <div className="h-[300px] w-full lg:w-2/3">
+            <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie
-                  data={data}
-                  dataKey="value"
-                  outerRadius={100}
-                  label={({ name, value }) => `${name}: ${value}`}
-                  labelLine={false}
-                >
+                <Pie data={data} dataKey="value" outerRadius={100} label={({ name, value }) => `${name}: ${value}`} labelLine={false}>
                   {data.map((_, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index]}
-                      style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.1))" }}
-                    />
+                    <Cell key={`cell-${index}`} fill={colors[index]} style={{ filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.22))" }} />
                   ))}
                 </Pie>
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<ChartTooltip />} />
               </PieChart>
             </ResponsiveContainer>
+          </div>
 
-            {/* Legend */}
-            <div className="space-y-3">
-              {data.map((item, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 transition-colors"
-                >
-                  <div
-                    className="w-4 h-4 rounded-full"
-                    style={{ backgroundColor: COLORS[index] }}
-                  />
-                  <div>
-                    <p className="font-medium text-slate-900 dark:text-slate-50">
-                      {item.name}
-                    </p>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                      {item.value} resumes ({((item.value / 120) * 100).toFixed(1)}%)
-                    </p>
-                  </div>
+          <div className="w-full space-y-3 lg:w-1/3">
+            {data.map((item, index) => (
+              <div key={item.name} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                <div className="flex items-center gap-3">
+                  <span className="h-3 w-3 rounded-full" style={{ backgroundColor: colors[index] }} />
+                  <p className="text-sm font-medium text-[var(--foreground)]">{item.name}</p>
                 </div>
-              ))}
-            </div>
+                <p className="mt-1 text-xs text-[var(--foreground-muted)]">
+                  {item.value} resumes ({((item.value / 120) * 100).toFixed(1)}%)
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       </div>

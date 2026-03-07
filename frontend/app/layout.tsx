@@ -1,8 +1,19 @@
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
+import { dark } from "@clerk/ui/themes";
+import { Geist, Geist_Mono } from "next/font/google";
 import Navbar from "@/components/Navbar";
-import ThemeProvider from "@/components/ThemeProvider";
 import ParticleBackground from "@/components/ParticleBackground";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 export const metadata = {
   title: "Karmafit - Resume Analysis Platform",
@@ -15,18 +26,36 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider>
-      <html lang="en" suppressHydrationWarning>
-        <body className="bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-50">
-          <ThemeProvider>
-            <ParticleBackground />
-            <Navbar />
-            <main className="min-h-screen relative pt-20">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {children}
-              </div>
-            </main>
-          </ThemeProvider>
+    <ClerkProvider
+      appearance={{
+        baseTheme: dark,
+        variables: {
+          colorPrimary: "#5e6ad2",
+          colorBackground: "#0a0a0c",
+          colorInputBackground: "#0f0f12",
+          colorInputText: "#edecef",
+          colorText: "#edecef",
+          colorTextSecondary: "#8a8f98",
+          colorDanger: "#ef4444",
+          borderRadius: "0.5rem",
+          fontFamily: "var(--font-geist-sans), Inter, sans-serif",
+        },
+        elements: {
+          footer: "hidden",
+        },
+      }}
+    >
+      <html
+        lang="en"
+        className="dark"
+        suppressHydrationWarning
+      >
+        <body className={`${geistSans.variable} ${geistMono.variable} bg-[var(--background-base)] text-[var(--foreground)] antialiased`}>
+          <ParticleBackground />
+          <Navbar />
+          <main className="relative min-h-screen pt-20">
+            <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">{children}</div>
+          </main>
         </body>
       </html>
     </ClerkProvider>

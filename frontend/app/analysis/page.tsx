@@ -1,52 +1,45 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Image from "next/image";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth, useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+
+interface AnalysisData {
+  name: string;
+  email?: string;
+  position?: string;
+  experience?: string;
+  classification: string;
+  score: number;
+  technicalScore: number;
+  culturalScore: number;
+  growthPotential: number;
+  strengths: string[];
+  weaknesses: string[];
+}
 
 export default function AnalysisPage() {
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const { user } = useUser();
   const router = useRouter();
-  const [analysis, setAnalysis] = useState<any>(null);
+  const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (isLoaded && !isSignedIn) {
-      router.push("/candidate-login");
-      return;
-    }
-
-    if (isLoaded && isSignedIn && user) {
-      fetchAnalysis();
-    }
-  }, [isLoaded, isSignedIn, user]);
-
-  useEffect(() => {
-    return () => {
-      if (imageUrl && imageUrl.startsWith("blob:")) {
-        URL.revokeObjectURL(imageUrl);
-      }
-    };
-  }, [imageUrl]);
-
-  const fetchAnalysis = async () => {
+  const fetchAnalysis = useCallback(async () => {
     try {
       setIsLoading(true);
       const token = await getToken();
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       const candidateId = user?.id;
 
-      const response = await fetch(
-        `${apiUrl}/api/candidates/${candidateId}/full-analysis`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await fetch(`${apiUrl}/api/candidates/${candidateId}/full-analysis`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (!response.ok) {
         if (response.status === 404) {
@@ -57,10 +50,9 @@ export default function AnalysisPage() {
         return;
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as { analysis: AnalysisData; resume_image_url?: string };
       setAnalysis(data.analysis);
 
-      // Fetch image with auth and convert to blob URL.
       if (data.resume_image_url) {
         const imageResponse = await fetch(`${apiUrl}${data.resume_image_url}`, {
           headers: {
@@ -76,19 +68,39 @@ export default function AnalysisPage() {
           setImageUrl(null);
         }
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to load your analysis");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to load your analysis";
+      setError(message);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [getToken, user?.id]);
+
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      router.push("/candidate-login");
+      return;
+    }
+
+    if (isLoaded && isSignedIn && user) {
+      fetchAnalysis();
+    }
+  }, [fetchAnalysis, isLoaded, isSignedIn, router, user]);
+
+  useEffect(() => {
+    return () => {
+      if (imageUrl && imageUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(imageUrl);
+      }
+    };
+  }, [imageUrl]);
 
   if (!isLoaded || isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-600 dark:text-slate-400">Loading your analysis...</p>
+          <div className="mx-auto mb-4 h-14 w-14 animate-spin rounded-full border-4 border-[var(--accent)] border-t-transparent" />
+          <p className="text-[var(--foreground-muted)]">Loading your analysis...</p>
         </div>
       </div>
     );
@@ -96,16 +108,11 @@ export default function AnalysisPage() {
 
   if (error) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-8 text-center">
-          <div className="text-4xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-2">
-            {error}
-          </h2>
-          <button
-            onClick={() => router.push("/upload")}
-            className="mt-4 px-6 py-3 bg-gradient-to-r from-indigo-500 to-pink-500 text-white font-semibold rounded-xl hover:shadow-lg transition-all"
-          >
+      <div className="mx-auto max-w-6xl px-4 py-8">
+        <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-8 text-center">
+          <div className="mb-4 text-4xl">⚠️</div>
+          <h2 className="mb-2 text-2xl font-semibold text-rose-300">{error}</h2>
+          <button onClick={() => router.push("/upload")} className="ui-btn-primary mt-4 px-6 py-3 text-sm">
             Upload Resume
           </button>
         </div>
@@ -117,219 +124,154 @@ export default function AnalysisPage() {
     return null;
   }
 
+  const classificationStyles: Record<string, string> = {
+    "Strong Fit": "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
+    "Trainable Fit": "border-amber-500/30 bg-amber-500/10 text-amber-300",
+    "Risky Fit": "border-rose-500/30 bg-rose-500/10 text-rose-300",
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-      {/* Header */}
+    <div className="mx-auto max-w-6xl space-y-8 px-4 py-8">
       <div>
-        <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-indigo-600 to-pink-600 dark:from-indigo-400 dark:to-pink-400 bg-clip-text text-transparent">
+        <p className="label-mono mb-2">Candidate Perspective</p>
+        <h1 className="mb-2 bg-gradient-to-b from-white via-white/95 to-white/70 bg-clip-text text-3xl font-semibold tracking-tight text-transparent sm:text-4xl">
           Your Resume Analysis
         </h1>
-        <p className="text-slate-600 dark:text-slate-400">
+        <p className="text-[var(--foreground-muted)]">
           Comprehensive analysis of your resume and qualifications
         </p>
       </div>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Resume Image */}
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-200">
-            Resume Preview
-          </h2>
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-lg">
+          <h2 className="text-xl font-semibold text-[var(--foreground)]">Resume Preview</h2>
+          <div className="ui-card p-4">
             {imageUrl ? (
-              <div className="relative w-full aspect-[8.5/11] bg-slate-100 dark:bg-slate-700 rounded-lg overflow-hidden">
-                <img
+              <div className="relative aspect-[8.5/11] w-full overflow-hidden rounded-lg border border-white/10 bg-black/20">
+                <Image
                   src={imageUrl}
                   alt="Resume"
-                  className="object-contain w-full h-full"
+                  fill
+                  unoptimized
+                  className="h-full w-full object-contain"
+                  sizes="(max-width: 1024px) 100vw, 50vw"
                 />
               </div>
             ) : (
-              <div className="flex items-center justify-center aspect-[8.5/11] bg-slate-100 dark:bg-slate-700 rounded-lg">
-                <p className="text-slate-500">Resume image not available</p>
+              <div className="flex aspect-[8.5/11] items-center justify-center rounded-lg border border-white/10 bg-white/5">
+                <p className="text-[var(--foreground-muted)]">Resume image not available</p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Analysis Details */}
         <div className="space-y-6">
-          {/* Personal Info */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-lg">
-            <h3 className="text-lg font-semibold mb-4 text-slate-800 dark:text-slate-200">
-              Personal Information
-            </h3>
+          <section className="ui-card p-6">
+            <h3 className="mb-4 text-lg font-semibold text-[var(--foreground)]">Personal Information</h3>
             <div className="space-y-3">
               <div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Name</p>
-                <p className="font-semibold text-slate-800 dark:text-slate-200">
-                  {analysis.name}
-                </p>
+                <p className="text-sm text-[var(--foreground-muted)]">Name</p>
+                <p className="font-semibold text-[var(--foreground)]">{analysis.name}</p>
               </div>
               <div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Email</p>
-                <p className="font-semibold text-slate-800 dark:text-slate-200">
-                  {analysis.email || "Not specified"}
-                </p>
+                <p className="text-sm text-[var(--foreground-muted)]">Email</p>
+                <p className="font-semibold text-[var(--foreground)]">{analysis.email || "Not specified"}</p>
               </div>
               <div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Position</p>
-                <p className="font-semibold text-slate-800 dark:text-slate-200">
-                  {analysis.position}
-                </p>
+                <p className="text-sm text-[var(--foreground-muted)]">Position</p>
+                <p className="font-semibold text-[var(--foreground)]">{analysis.position || "Not specified"}</p>
               </div>
               <div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Experience</p>
-                <p className="font-semibold text-slate-800 dark:text-slate-200">
-                  {analysis.experience}
-                </p>
+                <p className="text-sm text-[var(--foreground-muted)]">Experience</p>
+                <p className="font-semibold text-[var(--foreground)]">{analysis.experience || "Not specified"}</p>
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Classification & Overall Score */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-lg">
-            <h3 className="text-lg font-semibold mb-4 text-slate-800 dark:text-slate-200">
-              Overall Assessment
-            </h3>
+          <section className="ui-card p-6">
+            <h3 className="mb-4 text-lg font-semibold text-[var(--foreground)]">Overall Assessment</h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-slate-600 dark:text-slate-400">Classification</span>
-                <span
-                  className={`px-4 py-2 rounded-full font-semibold ${
-                    analysis.classification === "Strong Fit"
-                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                      : analysis.classification === "Trainable Fit"
-                      ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                      : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                  }`}
-                >
+                <span className="text-[var(--foreground-muted)]">Classification</span>
+                <span className={`rounded-full border px-4 py-2 font-semibold ${classificationStyles[analysis.classification] || "border-white/15 bg-white/10 text-[var(--foreground)]"}`}>
                   {analysis.classification}
                 </span>
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-slate-600 dark:text-slate-400">Overall Score</span>
-                  <span className="font-bold text-2xl text-indigo-600 dark:text-indigo-400">
-                    {analysis.score}%
-                  </span>
+                  <span className="text-[var(--foreground-muted)]">Overall Score</span>
+                  <span className="text-2xl font-semibold text-[var(--accent-bright)]">{analysis.score}%</span>
                 </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
-                  <div
-                    className="bg-gradient-to-r from-indigo-500 to-pink-500 h-3 rounded-full transition-all duration-500"
-                    style={{ width: `${analysis.score}%` }}
-                  />
+                <div className="h-3 w-full rounded-full bg-white/10">
+                  <div className="h-3 rounded-full bg-gradient-to-r from-[#5e6ad2] to-[#6872d9]" style={{ width: `${analysis.score}%` }} />
                 </div>
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Score Breakdown */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-lg">
-            <h3 className="text-lg font-semibold mb-4 text-slate-800 dark:text-slate-200">
-              Score Breakdown
-            </h3>
+          <section className="ui-card p-6">
+            <h3 className="mb-4 text-lg font-semibold text-[var(--foreground)]">Score Breakdown</h3>
             <div className="space-y-4">
-              {/* Technical Score */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-slate-600 dark:text-slate-400">Technical Skills</span>
-                  <span className="font-semibold text-blue-600 dark:text-blue-400">
-                    {analysis.technicalScore}%
-                  </span>
-                </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                  <div
-                    className="bg-blue-500 h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${analysis.technicalScore}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Cultural Score */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-slate-600 dark:text-slate-400">Cultural Fit</span>
-                  <span className="font-semibold text-purple-600 dark:text-purple-400">
-                    {analysis.culturalScore}%
-                  </span>
-                </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                  <div
-                    className="bg-purple-500 h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${analysis.culturalScore}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Growth Potential */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-slate-600 dark:text-slate-400">Growth Potential</span>
-                  <span className="font-semibold text-green-600 dark:text-green-400">
-                    {analysis.growthPotential}%
-                  </span>
-                </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                  <div
-                    className="bg-green-500 h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${analysis.growthPotential}%` }}
-                  />
-                </div>
-              </div>
+              <MetricRow label="Technical Skills" value={analysis.technicalScore} color="from-blue-500 to-indigo-500" />
+              <MetricRow label="Cultural Fit" value={analysis.culturalScore} color="from-violet-500 to-fuchsia-500" />
+              <MetricRow label="Growth Potential" value={analysis.growthPotential} color="from-emerald-500 to-teal-500" />
             </div>
-          </div>
+          </section>
         </div>
       </div>
 
-      {/* Strengths & Weaknesses */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Strengths */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-lg">
-          <h3 className="text-lg font-semibold mb-4 text-slate-800 dark:text-slate-200 flex items-center gap-2">
-            <span className="text-2xl">💪</span>
-            Strengths
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+        <section className="ui-card p-6">
+          <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--foreground)]">
+            <span className="text-2xl">💪</span> Strengths
           </h3>
           <div className="flex flex-wrap gap-2">
             {analysis.strengths.map((strength: string, index: number) => (
               <span
                 key={index}
-                className="px-3 py-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-full text-sm font-medium"
+                className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-sm font-medium text-emerald-300"
               >
                 {strength}
               </span>
             ))}
           </div>
-        </div>
+        </section>
 
-        {/* Weaknesses */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-lg">
-          <h3 className="text-lg font-semibold mb-4 text-slate-800 dark:text-slate-200 flex items-center gap-2">
-            <span className="text-2xl">📚</span>
-            Areas for Improvement
+        <section className="ui-card p-6">
+          <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--foreground)]">
+            <span className="text-2xl">📚</span> Areas for Improvement
           </h3>
           <div className="flex flex-wrap gap-2">
             {analysis.weaknesses.map((weakness: string, index: number) => (
               <span
                 key={index}
-                className="px-3 py-1 bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 rounded-full text-sm font-medium"
+                className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-sm font-medium text-amber-300"
               >
                 {weakness}
               </span>
             ))}
           </div>
-        </div>
+        </section>
       </div>
 
-      {/* Action Button */}
       <div className="flex justify-center">
-        <button
-          onClick={() => router.push("/upload")}
-          className="px-8 py-3 bg-gradient-to-r from-indigo-500 to-pink-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/50 transition-all duration-300"
-        >
+        <button onClick={() => router.push("/upload")} className="ui-btn-primary px-8 py-3 text-sm">
           Update Resume
         </button>
+      </div>
+    </div>
+  );
+}
+
+function MetricRow({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-[var(--foreground-muted)]">{label}</span>
+        <span className={`bg-gradient-to-r ${color} bg-clip-text font-semibold text-transparent`}>{value}%</span>
+      </div>
+      <div className="h-2 w-full rounded-full bg-white/10">
+        <div className={`h-2 rounded-full bg-gradient-to-r ${color}`} style={{ width: `${value}%` }} />
       </div>
     </div>
   );

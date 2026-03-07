@@ -21,6 +21,7 @@ class Candidate(Base):
 
     candidate_id = Column(String, primary_key=True, index=True)
     username = Column(String, index=True)
+    name = Column(String, index=True)  # Name extracted from resume
     resume_text = Column(Text)
     analysis = Column(JSON)  # Store the full analysis JSON
 

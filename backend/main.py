@@ -115,8 +115,14 @@ async def upload_resume(
     """
     try:
         candidate_id = auth_data["user_id"]
-        # Get username from Clerk payload
-        username = auth_data["payload"].get("email", "").split("@")[0]
+        # Get username from Clerk payload (always present)
+        payload = auth_data["payload"]
+        username = (
+            payload.get("username") or
+            payload.get("first_name") or
+            payload.get("email", "").split("@")[0] or
+            "user"
+        )
 
         # Get file extension
         file_extension = os.path.splitext(file.filename)[1].lower()
@@ -138,17 +144,22 @@ async def upload_resume(
         # Read and analyze resume
         resume_text = read_resume(file_path)
         analysis = analyze_resume(resume_text, candidate_id)
+        
+        # Extract name from analysis
+        candidate_name = analysis.get("name", "Unknown")
 
         # Save to database (update if exists, create if not)
         candidate = db.query(Candidate).filter(Candidate.candidate_id == candidate_id).first()
         if candidate:
             candidate.username = username
+            candidate.name = candidate_name
             candidate.resume_text = resume_text
             candidate.analysis = analysis
         else:
             candidate = Candidate(
                 candidate_id=candidate_id,
                 username=username,
+                name=candidate_name,
                 resume_text=resume_text,
                 analysis=analysis
             )
@@ -209,22 +220,31 @@ async def search_candidates(
     db: Session = Depends(get_db)
 ):
     """
-    Search candidates by candidate_id or username
-    Returns analysis from database
+    Search candidates by candidate_id, username, or name
+    Returns list of matching candidates from database
     """
     try:
-        # Search by candidate_id or username
-        candidate = db.query(Candidate).filter(
-            (Candidate.candidate_id == q) | (Candidate.username == q)
-        ).first()
+        # Search by candidate_id, username, or name
+        candidates = db.query(Candidate).filter(
+            (Candidate.candidate_id == q) | 
+            (Candidate.username.ilike(f"%{q}%")) | 
+            (Candidate.name.ilike(f"%{q}%"))
+        ).all()
         
-        if not candidate:
-            raise HTTPException(status_code=404, detail="Candidate not found")
+        if not candidates:
+            raise HTTPException(status_code=404, detail="No candidates found")
         
         return {
-            "candidate_id": candidate.candidate_id,
-            "username": candidate.username,
-            "analysis": candidate.analysis
+            "results": [
+                {
+                    "candidate_id": c.candidate_id,
+                    "username": c.username,
+                    "name": c.name,
+                    "analysis": c.analysis
+                }
+                for c in candidates
+            ],
+            "count": len(candidates)
         }
     
     except HTTPException:
@@ -262,6 +282,7 @@ async def get_candidate_full_analysis(
         return {
             "candidate_id": candidate.candidate_id,
             "username": candidate.username,
+            "name": candidate.name,
             "analysis": candidate.analysis,
             "resume_image_url": f"/api/candidates/{candidate_id}/resume-image",
         }

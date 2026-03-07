@@ -1,140 +1,132 @@
 "use client";
 
 import Link from "next/link";
+import type { MouseEvent } from "react";
 import { useState } from "react";
 
 export default function Home() {
   const [selectedRole, setSelectedRole] = useState<"candidate" | "recruiter" | null>(null);
 
+  const setSpotlight = (event: MouseEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    event.currentTarget.style.setProperty("--spot-x", `${event.clientX - rect.left}px`);
+    event.currentTarget.style.setProperty("--spot-y", `${event.clientY - rect.top}px`);
+  };
+
   return (
-    <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center">
-      <div className="max-w-4xl w-full space-y-8">
-        {/* Header */}
-        <div className="text-center space-y-4">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-indigo-600 to-pink-600 dark:from-indigo-400 dark:to-pink-400 bg-clip-text text-transparent">
-            Welcome to Karmafit
+    <div className="relative min-h-[calc(100vh-5rem)] overflow-hidden py-10 sm:py-14">
+      <div className="ambient-blob -left-[20%] top-[-20%] h-[720px] w-[920px] bg-[radial-gradient(circle,rgba(94,106,210,0.35),transparent_70%)]" />
+      <div className="ambient-blob right-[-16%] top-[2%] h-[560px] w-[760px] bg-[radial-gradient(circle,rgba(107,116,225,0.22),transparent_70%)] [animation-delay:1.2s]" />
+      <div className="ambient-blob bottom-[-30%] left-[25%] h-[620px] w-[920px] bg-[radial-gradient(circle,rgba(94,106,210,0.18),transparent_70%)] [animation-duration:10s]" />
+
+      <div className="relative mx-auto w-full max-w-5xl space-y-10">
+        <div className="space-y-5 text-center">
+          <p className="label-mono">Resume Intelligence Platform</p>
+          <h1 className="mx-auto max-w-4xl text-4xl font-semibold tracking-[-0.03em] text-transparent sm:text-6xl lg:text-7xl bg-gradient-to-b from-white via-white/95 to-white/70 bg-clip-text">
+            Hire with clarity in a
+            <span className="mx-3 bg-[linear-gradient(90deg,#5E6AD2,#8490ff,#5E6AD2)] bg-[length:200%_100%] bg-clip-text text-transparent animate-[gradient-shift_6s_ease_infinite]">
+              single glance
+            </span>
           </h1>
-          <p className="text-xl text-slate-600 dark:text-slate-400">
-            Choose your role to continue
+          <p className="mx-auto max-w-2xl text-base leading-relaxed text-[var(--foreground-muted)] sm:text-lg">
+            Choose your role to continue. Candidates get immediate resume feedback, and recruiters move from signal to shortlist with fewer clicks.
           </p>
         </div>
 
-        {/* Role Selection Cards */}
-        <div className="grid md:grid-cols-2 gap-6 mt-12">
-          {/* Candidate Card */}
+        <div className="mt-4 grid gap-6 md:grid-cols-2">
           <Link href="/candidate-login">
             <div
               onMouseEnter={() => setSelectedRole("candidate")}
               onMouseLeave={() => setSelectedRole(null)}
-              className={`group relative cursor-pointer transition-all duration-300 ${
-                selectedRole === "candidate" ? "scale-105" : ""
+              onMouseMove={setSpotlight}
+              className={`ui-card ui-spotlight group cursor-pointer p-7 sm:p-8 ${
+                selectedRole === "candidate" ? "border-[color:var(--border-accent)]" : ""
               }`}
             >
-              {/* Gradient border effect */}
-              <div
-                className={`absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl transition-opacity duration-300 blur-lg ${
-                  selectedRole === "candidate" ? "opacity-100" : "opacity-0"
-                }`}
-              />
-
-              <div className="relative bg-white dark:bg-slate-800 rounded-2xl p-8 border-2 border-slate-200 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all duration-300 h-64 flex flex-col justify-between">
-                {/* Icon */}
-                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-200 dark:from-indigo-900 dark:to-purple-800 flex items-center justify-center text-4xl mb-4">
-                  👤
-                </div>
-
-                {/* Content */}
+              <div className="absolute inset-0 z-[2] rounded-2xl bg-gradient-to-b from-[#5e6ad2]/30 to-transparent opacity-0 transition-opacity duration-300 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] group-hover:opacity-100" />
+              <div className="relative z-[3] flex min-h-64 flex-col justify-between gap-7">
                 <div>
-                  <h2 className="text-2xl font-bold mb-3 bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
-                    I'm a Candidate
+                  <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-3xl shadow-[inset_0_1px_0_0_rgba(255,255,255,0.15)]">
+                    👤
+                  </div>
+                  <h2 className="text-2xl font-semibold tracking-tight text-transparent bg-gradient-to-b from-white via-white/95 to-white/75 bg-clip-text">
+                    I&apos;m a Candidate
                   </h2>
-                  <p className="text-slate-600 dark:text-slate-400">
-                    Upload your resume and get instant AI-powered analysis and feedback
+                  <p className="mt-3 max-w-md text-sm leading-relaxed text-[var(--foreground-muted)] sm:text-base">
+                    Upload your resume and receive a clear AI report with strengths, growth areas, and fit breakdown.
                   </p>
                 </div>
 
-                {/* Arrow */}
-                <div className="flex justify-end">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center text-white group-hover:scale-110 transition-transform duration-300">
-                    →
-                  </div>
+                <div className="flex items-center justify-between">
+                  <span className="label-mono">Fast Feedback</span>
+                  <span className="ui-btn-secondary h-9 w-9 text-lg">→</span>
                 </div>
               </div>
             </div>
           </Link>
 
-          {/* Recruiter Card */}
           <Link href="/dashboard">
             <div
               onMouseEnter={() => setSelectedRole("recruiter")}
               onMouseLeave={() => setSelectedRole(null)}
-              className={`group relative cursor-pointer transition-all duration-300 ${
-                selectedRole === "recruiter" ? "scale-105" : ""
+              onMouseMove={setSpotlight}
+              className={`ui-card ui-spotlight group cursor-pointer p-7 sm:p-8 ${
+                selectedRole === "recruiter" ? "border-[color:var(--border-accent)]" : ""
               }`}
             >
-              {/* Gradient border effect */}
-              <div
-                className={`absolute inset-0 bg-gradient-to-r from-pink-500 to-rose-600 rounded-2xl transition-opacity duration-300 blur-lg ${
-                  selectedRole === "recruiter" ? "opacity-100" : "opacity-0"
-                }`}
-              />
-
-              <div className="relative bg-white dark:bg-slate-800 rounded-2xl p-8 border-2 border-slate-200 dark:border-slate-700 hover:border-pink-500 dark:hover:border-pink-400 transition-all duration-300 h-64 flex flex-col justify-between">
-                {/* Icon */}
-                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-pink-100 to-rose-200 dark:from-pink-900 dark:to-rose-800 flex items-center justify-center text-4xl mb-4">
-                  💼
-                </div>
-
-                {/* Content */}
+              <div className="absolute inset-0 z-[2] rounded-2xl bg-gradient-to-b from-[#5e6ad2]/30 to-transparent opacity-0 transition-opacity duration-300 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] group-hover:opacity-100" />
+              <div className="relative z-[3] flex min-h-64 flex-col justify-between gap-7">
                 <div>
-                  <h2 className="text-2xl font-bold mb-3 bg-gradient-to-r from-pink-600 to-rose-600 dark:from-pink-400 dark:to-rose-400 bg-clip-text text-transparent">
-                    I'm a Recruiter
+                  <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-3xl shadow-[inset_0_1px_0_0_rgba(255,255,255,0.15)]">
+                    💼
+                  </div>
+                  <h2 className="text-2xl font-semibold tracking-tight text-transparent bg-gradient-to-b from-white via-white/95 to-white/75 bg-clip-text">
+                    I&apos;m a Recruiter
                   </h2>
-                  <p className="text-slate-600 dark:text-slate-400">
-                    Access the dashboard to review candidates and manage recruitment
+                  <p className="mt-3 max-w-md text-sm leading-relaxed text-[var(--foreground-muted)] sm:text-base">
+                    Open your dashboard to compare profiles, inspect fit metrics, and make confident shortlisting decisions.
                   </p>
                 </div>
 
-                {/* Arrow */}
-                <div className="flex justify-end">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-500 to-rose-600 flex items-center justify-center text-white group-hover:scale-110 transition-transform duration-300">
-                    →
-                  </div>
+                <div className="flex items-center justify-between">
+                  <span className="label-mono">Data-Driven Hiring</span>
+                  <span className="ui-btn-secondary h-9 w-9 text-lg">→</span>
                 </div>
               </div>
             </div>
           </Link>
         </div>
 
-        {/* Features */}
-        <div className="mt-16 text-center grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="space-y-2">
-            <div className="text-3xl">⚡</div>
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100">
-              Instant Analysis
-            </h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Get AI-powered resume insights in seconds
+        <div className="grid gap-4 pt-2 text-center sm:grid-cols-3 sm:text-left">
+          <div className="ui-card p-5">
+            <p className="label-mono">Speed</p>
+            <h3 className="mt-2 text-lg font-semibold text-[var(--foreground)]">Instant Analysis</h3>
+            <p className="mt-1 text-sm text-[var(--foreground-muted)]">
+              Live scoring and narrative summaries within seconds.
             </p>
           </div>
-          <div className="space-y-2">
-            <div className="text-3xl">🎯</div>
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100">
-              Smart Matching
-            </h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Advanced candidate classification system
+
+          <div className="ui-card p-5">
+            <p className="label-mono">Clarity</p>
+            <h3 className="mt-2 text-lg font-semibold text-[var(--foreground)]">Smart Matching</h3>
+            <p className="mt-1 text-sm text-[var(--foreground-muted)]">
+              Classification signals help teams align quickly.
             </p>
           </div>
-          <div className="space-y-2">
-            <div className="text-3xl">📊</div>
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100">
-              Detailed Reports
-            </h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Comprehensive scoring and recommendations
+
+          <div className="ui-card p-5">
+            <p className="label-mono">Confidence</p>
+            <h3 className="mt-2 text-lg font-semibold text-[var(--foreground)]">Detailed Reports</h3>
+            <p className="mt-1 text-sm text-[var(--foreground-muted)]">
+              Transparent metrics and recommendation context.
             </p>
           </div>
+        </div>
+
+        <div className="flex justify-center">
+          <Link href="/candidate-login" className="ui-btn-primary px-6 py-3 text-sm sm:text-base">
+            Start Candidate Flow
+          </Link>
         </div>
       </div>
     </div>
