@@ -17,6 +17,6 @@ class Settings:
     @property
     def model(self):
         return self.__model
-    @property  
+    @property
     def processor(self):
         return self.__processor
