@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Header
+from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Header, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
 from typing import Optional
@@ -116,7 +116,7 @@ async def login_user(request: LoginRequest):
 @app.post("/api/upload-resume")
 async def upload_resume(
     file: UploadFile = File(...),
-    candidate_id: str = None,
+    candidate_id: str = Form(...),
     token: str = Depends(verify_token),
 ):
     """

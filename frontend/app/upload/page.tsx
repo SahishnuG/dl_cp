@@ -93,16 +93,17 @@ export default function UploadResume() {
     setError("");
 
     try {
-      const userId = localStorage.getItem("user_id");
+      const candidateId =
+        localStorage.getItem("candidate_id");
       const token = localStorage.getItem("access_token");
 
-      if (!userId || !token) {
+      if (!candidateId || !token) {
         throw new Error("Authentication required");
       }
 
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("candidate_id", userId);
+      formData.append("candidate_id", candidateId);
 
       const response = await fetch("http://localhost:8000/api/upload-resume", {
         method: "POST",

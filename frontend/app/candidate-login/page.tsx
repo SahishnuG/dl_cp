@@ -45,7 +45,7 @@ export default function CandidateLogin() {
 
       // Store token and user data in localStorage
       localStorage.setItem("access_token", data.access_token);
-      localStorage.setItem("user_id", data.id);
+      localStorage.setItem("candidate_id", data.id);
       localStorage.setItem("user_email", data.email);
       localStorage.setItem("user_name", data.full_name || "");
 
