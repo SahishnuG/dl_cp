@@ -281,24 +281,14 @@ Base.metadata.create_all(bind=engine)
 
 
 # Authentication helper functions
-def _truncate_password_for_bcrypt(password: str) -> str:
-    """Bcrypt only uses the first 72 bytes; truncate safely for UTF-8 input."""
-    password_bytes = password.encode("utf-8")
-    if len(password_bytes) <= 72:
-        return password
-    return password_bytes[:72].decode("utf-8", errors="ignore")
-
-
 def hash_password(password: str) -> str:
     """Hash a password using bcrypt"""
-    safe_password = _truncate_password_for_bcrypt(password)
-    return pwd_context.hash(safe_password)
+    return pwd_context.hash(password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash"""
-    safe_password = _truncate_password_for_bcrypt(plain_password)
-    return pwd_context.verify(safe_password, hashed_password)
+    return pwd_context.verify(plain_password, hashed_password)
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
