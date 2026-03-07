@@ -306,10 +306,8 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 ## Future Enhancements
 
 - [ ] Refresh token logic (current: 30-min expiry only)
-- [ ] Email verification on signup
 - [ ] Password reset flow
 - [ ] Real-time candidate search from database
-- [ ] Resume comparison features
 - [ ] Production deployment (Docker images, CI/CD)
 - [ ] Rate limiting on API endpoints
 - [ ] Recruiter dashboard with real data integration
