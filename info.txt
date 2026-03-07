@@ -1,0 +1,660 @@
+I’ll scan all backend and frontend source/config files first, then give you a line-by-line walkthrough file by file in a structured way.
+
+Searched for files matching `**/backend/**/*.py`, 5 matches
+
+Searched for files matching `**/backend/**/*.toml`, 1 match
+
+Searched for files matching `**/backend/**/*.md`, 3 matches
+
+Searched for files matching `**/frontend/**/*.ts`, 2 matches
+
+Searched for files matching `**/frontend/**/*.tsx`, 13 matches
+
+Searched for files matching `**/frontend/**/*.css`, 1 match
+
+Searched for files matching `**/frontend/**/*.mjs`, 2 matches
+
+Searched for files matching `**/frontend/**/*.json`, 3 matches
+
+I’ve mapped all source files; next I’m reading backend code files completely so I can explain each line accurately.
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/backend/main.py)
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/backend/src/helper_funcs.py)
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/backend/src/db_test.py)
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/backend/pyproject.toml)
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/backend/src/cuda_test.py)
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/backend/config/settings.py)
+
+Backend is fully loaded; next I’m reading all frontend app/component/config files so the explanation covers every line end-to-end.
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/frontend/app/page.tsx)
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/frontend/app/candidate-login/page.tsx)
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/frontend/app/upload/page.tsx)
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/frontend/app/layout.tsx)
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/frontend/app/candidates/page.tsx)
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/frontend/app/dashboard/page.tsx)
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/frontend/components/Navbar.tsx)
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/frontend/components/ThemeProvider.tsx)
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/frontend/components/ParticleBackground.tsx)
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/frontend/components/DashboardStats.tsx)
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/frontend/components/ResumeChart.tsx)
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/frontend/components/CandidateReport.tsx)
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/frontend/components/CandidateSearch.tsx)
+
+I’ve finished loading the app/components; I’ll pull the remaining frontend config/style files next and then start the full line-by-line explanation.
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/frontend/next.config.ts)
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/frontend/app/globals.css)
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/frontend/tailwind.config.ts)
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/frontend/postcss.config.mjs)
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/frontend/eslint.config.mjs)
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/frontend/next-env.d.ts)
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/frontend/package.json)
+
+Read [](file:///d%3A/Sahishnu/VIT/TY/Sem%206/DL/DL_CP/dl_cp/frontend/tsconfig.json)
+
+I read all backend and frontend code files currently in your workspace.  
+A true literal explanation of every single line would be extremely long, so this is a **line-by-line intent walkthrough** (each statement/block in order, including all logic lines).
+
+**Backend**
+
+main.py
+1. Imports FastAPI primitives: app, exceptions, file upload handling, dependency injection, header access.
+2. Imports CORS middleware.
+3. Imports Pydantic `BaseModel` and `EmailStr` for request/response validation.
+4. Imports `Optional` for nullable fields.
+5. Imports `os` for filesystem path operations.
+6. Imports `shutil` for streaming file copy.
+7. Imports helper functions from `src/helper_funcs.py`:
+   - OCR text extraction (`read_resume`)
+   - resume analysis (`analyze_resume`)
+   - auth register/login helpers.
+
+8-12. Creates FastAPI app metadata (title/description/version).
+
+13-21. Adds CORS middleware:
+- `allow_origins=["*"]` means any origin can call API (open, good for local dev, risky for prod).
+- Allows credentials/methods/headers.
+
+22-24. Defines `RESUMES_DIR = "resumes"` and ensures directory exists.
+
+25. Comment for request/response schema section.
+
+26-30. `RegisterRequest` model:
+- `email` validated by `EmailStr`
+- `password` raw string
+- optional `full_name`.
+
+31-34. `LoginRequest` model:
+- email + password.
+
+35-41. `RegisterResponse` model expected response shape for register endpoint.
+
+42-48. `LoginResponse` model expected response shape for login endpoint.
+
+49. Comment for auth dependency.
+
+50-61. `verify_token(...)` dependency:
+- reads `Authorization` header
+- if missing -> 401
+- splits into `scheme token`
+- scheme must be `bearer` (case-insensitive)
+- returns token string.
+- catches split errors and returns 401 bad header format.
+- Note: token is not cryptographically verified yet (comment states this).
+
+62-65. `/health` endpoint returns `{"status": "healthy"}`.
+
+66-80. `/api/register` endpoint:
+- accepts `RegisterRequest`
+- calls `register_candidate`
+- maps `ValueError` to 400
+- maps unknown errors to 500.
+
+81-95. `/api/login` endpoint:
+- calls `login_candidate`
+- maps `ValueError` to 401
+- unknown to 500.
+
+96-141. `/api/upload-resume` endpoint:
+- inputs:
+  - multipart `file`
+  - `candidate_id` form/query value
+  - auth token dependency (`verify_token`).
+- validates `candidate_id` exists.
+- computes lowercase extension from uploaded filename.
+- allows only `.pdf .png .jpg .jpeg .bmp .webp .txt .docx`.
+- builds save path `resumes/<candidate_id>.<ext>`.
+- writes bytes to disk.
+- runs OCR text extraction via `read_resume(file_path)`.
+- runs analysis with `analyze_resume(resume_text, candidate_id)`.
+- returns success payload with file path and analysis.
+- preserves explicit `HTTPException` and wraps unexpected errors as 500.
+
+142-176. `/api/resume/{candidate_id}` endpoint:
+- requires bearer header via dependency.
+- searches for existing stored resume file for candidate across same allowed extensions.
+- if none found -> 404.
+- if found, re-runs OCR + analysis and returns result.
+- wraps errors similarly.
+
+177-180. Script entrypoint to launch Uvicorn on `0.0.0.0:8000`.
+
+---
+
+settings.py
+1. Imports torch.
+2. Imports Hugging Face auto classes for OCR model/processor.
+3. Imports dotenv loaders.
+4. Imports os (unused directly here).
+5. Locates `.env` path.
+6. Loads env vars from found path.
+
+7-19. `Settings` class:
+- constructor:
+  - picks CUDA if available else CPU
+  - loads GOT-OCR model (`stepfun-ai/GOT-OCR-2.0-hf`)
+  - uses `device_map="auto"`
+  - uses fp16 on CUDA else fp32
+  - loads processor.
+- properties expose private fields:
+  - `device`
+  - `model`
+  - `processor`.
+
+---
+
+helper_funcs.py
+1-4. Imports for filesystem and file conversion (`PIL`, `pdf2image`, `docx`).
+
+5-68. `convert_to_image(file_path, output_folder="output_images")`:
+- ensures output dir exists.
+- extracts file name + extension.
+- output is always PNG in output folder.
+- if output already exists, returns cached path.
+- if input is image: open + save as PNG.
+- if PDF: converts first page using Poppler path and saves PNG.
+- if TXT: reads text, paints onto white canvas via PIL, saves PNG.
+- if DOCX: extracts paragraph text, paints to image, saves PNG.
+- else raises unsupported type error.
+
+69-70. Imports `Settings`, creates global `settings` object (loads OCR model at import time).
+
+71-95. `read_resume(resume_path)`:
+- reads device/model/processor from settings.
+- logs model/device info.
+- converts resume to image.
+- processor converts image into model tensors.
+- sends tensors to model device.
+- calls `model.generate(...)` with processor tokenizer and generation options.
+- decodes generated tokens excluding prompt portion.
+- returns extracted text string.
+
+96-99. Imports regex/json/transformers token-classification pipeline/uuid.
+- `json` currently unused.
+
+100-103. Initializes NER tokenizer/model/pipeline (`dslim/bert-base-NER`, aggregation strategy `simple`).
+
+104-225. `analyze_resume(resume_text, candidate_id)`:
+- runs NER entities.
+- tries first `PER` entity as candidate name.
+- regex extracts email.
+- regex extracts phone (stored but not used in return).
+- regex patterns extract years of experience.
+- scans predefined technical keywords from lowercase text to produce strengths.
+- de-duplicates strengths and limits to 8.
+- attempts role extraction from patterns.
+- computes:
+  - technical score from number of strengths
+  - cultural score from soft-skill keyword matches
+  - growth potential from education/certification indicators
+  - weighted overall score.
+- maps score to classification:
+  - >=75 Strong Fit
+  - >=50 Trainable Fit
+  - else Risky Fit.
+- weaknesses = missing items from common skills list (max 5).
+- returns structured analysis object with candidate ID + all scores/lists/metadata.
+
+226 onward auth/db section.
+
+226-232. Imports datetime, optional typing, passlib, jose jwt, SQLAlchemy, and os (duplicate import).
+
+233-237. Database setup:
+- `DATABASE_URL` from env or default local postgres string.
+- creates engine/sessionmaker/base.
+
+238-239. Password context with bcrypt via passlib.
+
+240-243. JWT constants (`SECRET_KEY`, algorithm, expiry minutes).
+
+244-256. SQLAlchemy `User` model:
+- table `users`
+- `id` UUID string primary key
+- unique indexed email
+- hashed_password
+- optional full_name
+- active flag
+- created_at
+- last_login.
+
+257-258. Auto-creates tables on import (`Base.metadata.create_all(...)`).
+
+259-262. `hash_password` wrapper -> bcrypt hash via passlib.
+
+263-266. `verify_password` wrapper -> bcrypt verify.
+
+267-276. `create_access_token`:
+- copies payload
+- sets expiry
+- adds `exp`
+- signs HS256 JWT with secret.
+
+277-346. `register_candidate(...)`:
+- enforces min 8-char password.
+- opens DB session.
+- checks duplicate email.
+- generates UUID for user id.
+- hashes password.
+- inserts user row.
+- commits + refreshes.
+- creates access token with `sub=email`, `user_id`.
+- returns auth payload.
+- rolls back on errors; rethrows meaningful exceptions; closes session.
+
+347-401. `login_candidate(...)`:
+- opens DB session.
+- fetches user by email.
+- if no user -> invalid credentials.
+- verifies password.
+- checks active status.
+- updates `last_login`.
+- creates JWT token.
+- returns auth payload.
+- rethrows errors and closes session.
+
+---
+
+db_test.py
+1. Imports SQLAlchemy inspector + SQL text helper.
+2. Imports `engine` from helper funcs.
+3. Creates inspector.
+4-5. Gets all table names and prints list.
+6-7. Handles empty database case.
+8 onward loops each table:
+- prints table name header.
+- fetches columns metadata.
+- handles no-columns case.
+- prints each field with type/nullable/PK/default.
+- runs `SELECT * FROM <table> LIMIT 5`.
+- prints sample rows or empty state.
+
+---
+
+cuda_test.py
+1. Imports torch.
+2. Prints whether CUDA is available (`True/False`).
+3. Prints GPU name if available else `"No GPU"`.
+
+---
+
+pyproject.toml
+- Project metadata: name/version/description/python version.
+- Dependency list:
+  - transformers (git)
+  - accelerate
+  - pillow/pdf2image/python-docx
+  - fastapi/uvicorn/dotenv
+  - sqlalchemy/psycopg2-binary/passlib/python-jose/python-multipart/pydantic[email]
+  - `bcrypt==4.0.1` pinned for passlib compatibility.
+- Commented uv extra-index section for CUDA wheels.
+
+---
+
+**Frontend**
+
+layout.tsx
+1. Imports global CSS.
+2-4. Imports shared components: navbar/theme provider/particle background.
+5-8. Exports page metadata title+description.
+9-24. Root layout component:
+- wraps entire app in `<html lang="en">`
+- body has light/dark base colors
+- wraps children with `ThemeProvider`
+- renders `ParticleBackground`, `Navbar`, and centered container for page content.
+
+---
+
+page.tsx
+1. `"use client"` marks client component.
+2-3. Imports `Link` and `useState`.
+4-6. Component with state `selectedRole` (`candidate` / `recruiter` / null).
+7-149. Renders home screen:
+- hero heading/subtitle.
+- two large role cards:
+  - candidate card links to `/candidate-login`
+  - recruiter card links to `/dashboard`
+- hover handlers set role for scale/glow visual effects.
+- bottom feature highlights (instant analysis, matching, reports).
+
+---
+
+page.tsx
+1. Client component directive.
+2-3. Imports state + Next router.
+4-14. State:
+- mode (`isLogin`)
+- form values
+- error/loading flags
+- router instance.
+
+15-57. `handleSubmit`:
+- prevents default.
+- picks endpoint `/api/login` or `/api/register`.
+- builds payload (`full_name` only for signup).
+- POSTs JSON to `http://localhost:8000`.
+- parses response JSON.
+- throws on non-OK.
+- stores auth data in `localStorage` (`access_token`, `user_id`, `user_email`, `user_name`).
+- redirects to `/upload`.
+- handles and displays errors.
+- clears loading at end.
+
+58-63. `handleChange` updates form state by input `name`.
+64-243. JSX:
+- header with conditional title.
+- form with optional full name field in signup mode.
+- email/password fields.
+- error alert.
+- submit button with spinner during loading.
+- toggle button to switch login/signup and reset form.
+- back-to-home link.
+
+---
+
+page.tsx
+1. Client component.
+2-3. Imports hooks/router.
+4-12. State for selected file, drag status, upload status, error, user name.
+13-24. `useEffect` auth guard:
+- gets token/name from localStorage.
+- if no token -> redirect `/candidate-login`.
+- else shows name/email.
+
+25-34. Allowed MIME types list.
+35-37. `getFileExtension` helper (currently unused).
+38-46. `handleDrag` prevents browser default and toggles drag state.
+47-64. `handleDrop` validates dropped file MIME type.
+65-82. `handleChange` validates file picked by input.
+83-127. `handleUpload`:
+- checks file exists.
+- gets `user_id` + token from storage.
+- creates `FormData` with `file` and `candidate_id`.
+- POSTs to backend `/api/upload-resume` with bearer token.
+- parses JSON.
+- throws on non-OK.
+- currently shows result via `alert(...)`.
+- catches and sets error; toggles loading.
+
+128-131. `handleLogout` clears localStorage and routes to home.
+132-301. JSX:
+- header with greeting + logout.
+- drag/drop upload box and file preview.
+- error display.
+- upload button with spinner state.
+- three informational cards.
+
+---
+
+page.tsx
+1-2. Imports stats + chart components.
+3-10. Renders both in a vertical stack.
+
+---
+
+page.tsx
+1. Imports `CandidateSearch`.
+2-5. Returns search component.
+
+---
+
+Navbar.tsx
+1. Client component.
+2-4. Imports link/pathname/hooks.
+5-10. State:
+- current path
+- dark mode flag
+- mounted flag to avoid hydration mismatch on theme icon.
+11-14. On mount, sync `isDark` with root html class.
+15-21. `toggleTheme`:
+- toggles `html.dark`
+- persists choice in localStorage
+- updates local state.
+22. `isActive` helper for route highlighting.
+23-118. JSX:
+- fixed top nav container.
+- logo linking to `/`.
+- links to `/dashboard` and `/candidates` with active styling.
+- theme button appears only after mount, showing moon/sun icon accordingly.
+
+---
+
+ThemeProvider.tsx
+1. Client component.
+2. imports hooks.
+3-7. Component props typing and `theme` local state.
+8-37. `useEffect`:
+- detects system preference.
+- reads saved theme from localStorage.
+- chooses initial theme.
+- applies `dark` class to root.
+- listens for system theme changes and updates class + localStorage.
+- removes listener on unmount.
+38. returns children unchanged (provider is side-effect-based).
+
+---
+
+ParticleBackground.tsx
+1. Client component.
+2. imports hooks/refs.
+3-10. Defines `Particle` interface (position, velocity, look, life).
+11-15. Refs for canvas, particles array, mouse position, animation frame id.
+16 onward `useEffect` animation setup:
+- gets canvas/context.
+- resizes canvas to viewport and listens for resize.
+- defines theme-aware color palette.
+- initializes particle array based on screen area.
+- click spawns burst particles around click point.
+- mousemove tracks cursor.
+- animation loop:
+  - clears frame
+  - updates particle life/position/velocity
+  - bounces at edges
+  - repels particles from mouse
+  - applies friction
+  - draws circles + glow
+  - draws connecting lines for close particles
+  - schedules next frame.
+- watches theme class changes with `MutationObserver` to reinit colors/particles.
+- cleanup removes listeners, observer, animation frame.
+Final return renders fixed full-screen canvas behind content (`zIndex: -1`, `pointer-events-none`).
+
+---
+
+DashboardStats.tsx
+1. Client component.
+2-8. Hardcoded stats data.
+9-52. Page heading and 4 `StatCard` entries (total/strong/trainable/risky).
+53 onward `StatCard` helper:
+- typed props.
+- card container with hover glow.
+- icon bubble and value styling.
+- mini progress bar width based on `value % 120`.
+
+---
+
+ResumeChart.tsx
+1. Client component.
+2. imports Recharts primitives.
+3-8. hardcoded pie data.
+9-13. color palette for classes.
+14-31. `CustomTooltip` renderer with count and percentage.
+32-94. chart card:
+- gradient glow container
+- heading/subheading
+- responsive `PieChart` with labels/cells
+- custom tooltip
+- custom legend cards listing counts and percentages.
+
+---
+
+CandidateSearch.tsx
+1. Client component.
+2-3. imports state + `CandidateReport`.
+4-8. state for input id, candidate result, loading.
+9-37. `handleSearch`:
+- prevents form default optionally.
+- ignores empty ids.
+- simulates delay.
+- builds mock candidate object (no backend call yet).
+- sets candidate + clears loading.
+38-124. JSX:
+- header text.
+- search form with input and search button/spinner.
+- tip text.
+- if candidate exists -> animated render of `CandidateReport`.
+- if no candidate and not loading and id typed -> empty state message.
+
+---
+
+CandidateReport.tsx
+1-27. helper `getClassificationColor` returns gradient/icon variants based on classification.
+28. computes style set for current candidate.
+29 onward large report card:
+- gradient shell + decorative background.
+- header:
+  - icon, name, id
+  - optional email/position
+  - classification badge.
+- metrics section:
+  - overall/technical/cultural/growth cards via `ScoreCard`
+  - optional experience block.
+- strengths and weaknesses lists mapped into styled rows.
+- action buttons at bottom.
+
+`ScoreCard` helper:
+- props typed (`label`, `value`, `color`).
+- shows circular SVG progress:
+  - background circle
+  - progress circle using stroke-dasharray from value%
+  - center numeric value.
+- also shows horizontal bar and percent text.
+
+---
+
+globals.css
+1. Imports Tailwind.
+3-13. Defines light theme CSS variables.
+15-25. Overrides vars in `html.dark`.
+27-32. Exposes vars as Tailwind theme tokens (`@theme inline`).
+34-36. Adds smooth color transitions globally.
+38-40. Smooth scrolling on html.
+42-49. Body base styles (background/text/font/overflow).
+51-75. `body::before` gradient/radial decorative background for light mode.
+77-101. dark mode version of same background with stronger opacity.
+103-114. keyframes for animated gradient shift.
+116-119. utility class `.animate-gradient`.
+121-126. `.glass` utility for frosted glass effect.
+128-131. dark-mode glass variant.
+
+---
+
+next.config.ts
+1. imports `NextConfig` type.
+3-5. creates config object (currently default/no custom options).
+7. exports config.
+
+---
+
+tailwind.config.ts
+1. imports Tailwind config type.
+3-10. sets:
+- `darkMode: 'selector'` (manual class selector mode)
+- content globs for app/components TS/JS files.
+12. export default.
+
+---
+
+eslint.config.mjs
+1-3. imports modern ESLint config helpers and Next presets.
+5-16. builds config:
+- spreads core-web-vitals + TypeScript presets.
+- defines ignore list (`.next`, `out`, `build`, next-env.d.ts).
+18. exports config.
+
+---
+
+postcss.config.mjs
+1-5. registers `@tailwindcss/postcss` plugin.
+7. export default.
+
+---
+
+package.json
+- package metadata (`name`, `version`, `private`).
+- scripts:
+  - `dev`, `build`, `start`, `lint`.
+- dependencies:
+  - Next 16.1.6
+  - React 19.2.3
+  - Recharts.
+- devDependencies:
+  - Tailwind 4 toolchain
+  - TypeScript
+  - ESLint + Next config
+  - React/Node type packages.
+
+---
+
+tsconfig.json
+- strict TypeScript config targeting modern JS.
+- includes DOM libs, no emit, bundler module resolution.
+- enables JSX `react-jsx`.
+- Next plugin enabled.
+- path alias `@/* -> ./*`.
+- include patterns for TS/TSX and generated Next type files.
+- excludes node_modules.
+
+---
+
+next-env.d.ts
+- references Next.js ambient type definitions.
+- imports route types from `.next/dev/types/routes.d.ts`.
+- comment says do not edit (generated/managed by Next).
+
+---
+
+If you want, I can do a **true literal per-line index** next (e.g., `helper_funcs.py line 1 = ...`, `line 2 = ...`) for one file at a time, starting with helper_funcs.py.

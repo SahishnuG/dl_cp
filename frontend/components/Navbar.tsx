@@ -60,6 +60,16 @@ export default function Navbar() {
             >
               Candidate Search
             </Link>
+            <Link
+              href="/analysis"
+              className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
+                isActive("/analysis")
+                  ? "bg-gradient-to-r from-indigo-500 to-pink-500 text-white shadow-lg shadow-indigo-500/50"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+              }`}
+            >
+              My Analysis
+            </Link>
           </div>
 
           {/* Theme Toggle */}

@@ -1,12 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { useAuth } from "@clerk/nextjs";
 import CandidateReport from "./CandidateReport";
 
 export default function CandidateSearch() {
   const [candidateId, setCandidateId] = useState("");
   const [candidate, setCandidate] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const { getToken } = useAuth();
 
   const handleSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -14,28 +17,38 @@ export default function CandidateSearch() {
     if (!candidateId.trim()) return;
 
     setIsLoading(true);
+    setError("");
 
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 600));
+    try {
+      const token = await getToken();
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      
+      const response = await fetch(`${apiUrl}/api/candidates/search?q=${encodeURIComponent(candidateId)}`, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
 
-    // Replace with real API call
-    const mockData = {
-      id: candidateId,
-      name: "Rahul Sharma",
-      email: "rahul.sharma@example.com",
-      position: "Senior Software Engineer",
-      classification: "Strong Fit",
-      score: 87,
-      experience: "5+ years",
-      strengths: ["Python", "Machine Learning", "Leadership", "Cloud Architecture"],
-      weaknesses: ["Cloud Deployment", "DevOps"],
-      technicalScore: 92,
-      culturalScore: 78,
-      growthPotential: 85,
-    };
-
-    setCandidate(mockData);
-    setIsLoading(false);
+      if (!response.ok) {
+        if (response.status === 404) {
+          setError("Candidate not found");
+          setCandidate(null);
+        } else {
+          throw new Error("Failed to search candidate");
+        }
+      } else {
+        const data = await response.json();
+        setCandidate({
+          id: data.candidate_id,
+          ...data.analysis,
+        });
+      }
+    } catch (err: any) {
+      setError(err.message || "An error occurred while searching");
+      setCandidate(null);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -121,8 +134,18 @@ export default function CandidateSearch() {
         </div>
       )}
 
+      {/* Error State */}
+      {error && !candidate && (
+        <div className="text-center py-12">
+          <div className="text-4xl mb-4">❌</div>
+          <p className="text-red-600 dark:text-red-400">
+            {error}
+          </p>
+        </div>
+      )}
+
       {/* Empty State */}
-      {!candidate && !isLoading && candidateId && (
+      {!candidate && !isLoading && !error && candidateId && (
         <div className="text-center py-12">
           <div className="text-4xl mb-4">🔍</div>
           <p className="text-slate-600 dark:text-slate-400">

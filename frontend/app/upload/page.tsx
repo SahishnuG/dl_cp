@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth, useUser, useClerk } from "@clerk/nextjs";
 
 export default function UploadResume() {
   const [file, setFile] = useState<File | null>(null);
@@ -10,19 +11,24 @@ export default function UploadResume() {
   const [error, setError] = useState("");
   const [userName, setUserName] = useState("");
   const router = useRouter();
+  const { isLoaded, userId, getToken } = useAuth();
+  const { user } = useUser();
+  const { signOut } = useClerk();
 
   useEffect(() => {
-    // Check if user is authenticated
-    const token = localStorage.getItem("access_token");
-    const name = localStorage.getItem("user_name");
-    
-    if (!token) {
+    if (!isLoaded) {
+      return;
+    }
+
+    if (!userId) {
       router.push("/candidate-login");
       return;
     }
-    
-    setUserName(name || localStorage.getItem("user_email") || "");
-  }, [router]);
+
+    const displayName =
+      user?.fullName || user?.firstName || user?.primaryEmailAddress?.emailAddress || "";
+    setUserName(displayName);
+  }, [isLoaded, userId, user, router]);
 
   const allowedTypes = [
     "application/pdf",
@@ -93,17 +99,17 @@ export default function UploadResume() {
     setError("");
 
     try {
-      const candidateId =
-        localStorage.getItem("candidate_id");
-      const token = localStorage.getItem("access_token");
-
-      if (!candidateId || !token) {
+      if (!userId) {
         throw new Error("Authentication required");
+      }
+
+      const token = await getToken();
+      if (!token) {
+        throw new Error("Authentication token missing");
       }
 
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("candidate_id", candidateId);
 
       const response = await fetch("http://localhost:8000/api/upload-resume", {
         method: "POST",
@@ -122,16 +128,16 @@ export default function UploadResume() {
       // Success - show analysis or redirect
       alert("Resume uploaded successfully! Analysis: " + JSON.stringify(data.analysis, null, 2));
       
-    } catch (err: any) {
-      setError(err.message || "Upload failed");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Upload failed";
+      setError(message);
     } finally {
       setUploading(false);
     }
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    router.push("/");
+  const handleLogout = async () => {
+    await signOut({ redirectUrl: "/" });
   };
 
   return (
