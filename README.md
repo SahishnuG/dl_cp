@@ -1,202 +1,235 @@
-# Full-Stack Resume Analysis Platform
+# Karmafit - Resume Analysis & Candidate Screening Platform
 
 ## Overview
 
-This is a comprehensive full-stack application for candidate resume analysis and evaluation. It combines a FastAPI backend with advanced NLP capabilities and a Next.js frontend with interactive visualizations.
+Karmafit is a full-stack intelligent resume analysis and candidate screening platform. It combines a FastAPI backend with advanced OCR/NLP capabilities and a Next.js frontend featuring real-time candidate analytics, resume search, and comprehensive analysis dashboards.
 
 ## Architecture
 
 ### Backend Stack
-- **FastAPI 0.104+** - REST API with JWT authentication and file upload handling
-- **PostgreSQL 13+** - Candidate database with Docker containerization
-- **SQLAlchemy 2.0+** - ORM with User model (UUID, email, hashed passwords, timestamps)
-- **Passlib + Bcrypt 4.0.1** - Password hashing with 72-byte UTF-8 truncation safety
-- **Python-Jose + HS256** - JWT token generation (30-min expiry)
-- **GOT-OCR 2.0 (stepfun-ai)** - Vision-language model for resume text extraction
-- **BERT-base-NER (dslim)** - Token classification for named entity recognition
-- **Transformers + PyTorch** - Deep learning framework with CUDA 12.1 support
+- **FastAPI 0.104+** - REST API with Clerk JWT verification and file handling
+- **PostgreSQL 15+** - Candidate data persistence with Docker containerization
+- **SQLAlchemy 2.0+** - ORM with Candidate model (candidate_id, username, resume_text, analysis JSON)
+- **PyJWT + RS256** - Clerk JWKS-based token verification (no secrets needed, public keys only)
+- **GOT-OCR 2.0** - Vision-language model for multi-format resume OCR (PDF, DOCX, TXT, images)
+- **BERT-base-NER** - Named entity recognition for structured data extraction
+- **PyTorch + CUDA 12.1** - Deep learning with GPU acceleration
 
 ### Frontend Stack
-- **Next.js 16.1.6** - React framework with SSR and routing
-- **React 19.2.3** - UI library
-- **Tailwind CSS 4** - Utility-first styling
-- **Recharts 3.7.0** - Data visualization (pie charts)
-- **TypeScript 5+** - Static type checking
+- **Next.js 16.1.6** - React framework with SSR, dynamic routing, API integration
+- **React 19.2.3** - UI library with hooks
+- **@clerk/nextjs 6.39.0** - Managed authentication & session handling
+- **Tailwind CSS 4** - Utility-first responsive styling
+- **Recharts 3.7.0** - Interactive data visualization
+- **TypeScript 5+** - Type-safe development
 
 ### Infrastructure
-- **Docker + docker-compose** - PostgreSQL containerization
-- **pgAdmin** - Database visualization (http://localhost:5050)
+- **Docker + docker-compose** - PostgreSQL + pgAdmin containerization
 - **Uvicorn** - ASGI server for FastAPI
+- **npm/Node.js** - Frontend package management
 
 ## Quick Start
 
 ### Prerequisites
 - Docker & Docker Desktop
-- Python 3.9+ with uv package manager
+- Python 3.10+ with uv package manager
 - Node.js 18+ with npm
-- Poppler (for PDF processing): Windows path `D:\Program Files\poppler-25.12.0\Library\bin`
+- Poppler (PDF processing): Windows `D:\Program Files\poppler-25.12.0\Library\bin`
+- Clerk account (https://clerk.com) with API keys
 
 ### Setup
 
-1. **Backend Setup**
-    ```
-    see README.md in backend/
-    ```
+1. **Environment Configuration**
+
+   Create `backend/.env`:
+   ```env
+   DATABASE_URL=postgresql://postgres:password@localhost:5432/karmafit_db
+   CLERK_JWKS_URL=https://your-clerk-domain/.well-known/jwks.json
+   CLERK_ISSUER=https://your-clerk-domain
+   CLERK_AUDIENCE=your-audience
+   NEXT_PUBLIC_API_URL=http://localhost:8000
+   ```
+
+   Create `frontend/.env.local`:
+   ```env
+   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxx
+   NEXT_PUBLIC_API_URL=http://localhost:8000
+   ```
 
 2. **Database Setup**
    ```bash
-   docker-compose up -d  # Starts PostgreSQL + pgAdmin
-   # Access pgAdmin at http://localhost:5050
-   # Default credentials: admin@admin.com / admin
+   docker-compose up -d
    ```
+   - PostgreSQL on `5432`
+   - pgAdmin on `5050` (admin@karmafit.com / admin)
 
-3. **Frontend Setup**
+3. **Backend Setup**
+   ```bash
+   cd backend
+   uv sync
+   uv pip install torch --index-url https://download.pytorch.org/whl/cu121
+   uv run main.py
+   ```
+   API runs on `http://localhost:8000`
+
+4. **Frontend Setup**
    ```bash
    cd frontend
    npm install
-   npm run dev  # Starts Next.js dev server on localhost:3000
+   npm run dev
    ```
+   Frontend runs on `http://localhost:3000`
 
 ## API Endpoints
 
-### Authentication
-- `POST /api/register` - Register new candidate
-  ```json
-  {
-    "email": "user@example.com",
-    "password": "securepass123",
-    "full_name": "John Doe"
-  }
-  ```
-
-- `POST /api/login` - Authenticate candidate
-  ```json
-  {
-    "email": "user@example.com",
-    "password": "securepass123"
-  }
-  ```
+### Authentication (Clerk-managed)
+- All endpoints require `Authorization: Bearer <clerk_jwt>` header
+- Token obtained via `@clerk/nextjs` on frontend
 
 ### Resume Operations
-- `POST /api/upload-resume` - Upload and analyze resume (requires Bearer token)
+- `POST /api/upload-resume` - Upload resume, extract text, store analysis
   - Accepts: PDF, DOCX, TXT, PNG, JPG, BMP, WEBP
-  - Returns: Extracted text + analysis (name, email, position, scores, strengths, weaknesses)
+  - Returns: Analysis object with scores, skills, classification
 
-- `GET /api/resume/{candidate_id}` - Retrieve stored resume analysis (requires Bearer token)
+- `GET /api/resume/{candidate_id}` - Retrieve analysis from database
+
+- `GET /api/candidates/search?q={id_or_username}` - Search by Clerk ID or username
+
+- `GET /api/candidates/{candidate_id}/full-analysis` - Get analysis + image URL
+
+- `GET /api/candidates/{candidate_id}/resume-image` - Serve resume preview image
 
 ### Health
 - `GET /health` - Service health check
 
 ## Key Features
 
-### Authentication Flow
-1. User selects role (candidate/recruiter) on home page
-2. Candidate registers/logs in with email + password
-3. JWT token stored in localStorage
-4. Protected endpoints require `Authorization: Bearer <token>` header
+### Authentication & Authorization
+- **Clerk OAuth**: Sign up/login via email, OAuth2, or passkeys
+- **JWT Verification**: Backend validates Clerk JWKS tokens (RS256)
+- **User Identity**: `candidate_id` = Clerk `user.id` (persistent, immutable)
+- **Session Management**: Frontend maintains Clerk session; tokens auto-refresh
 
 ### Resume Analysis Pipeline
-1. **File Upload**: Multi-format support (PDF, DOCX, TXT, images)
-2. **OCR Extraction**: GOT-OCR 2.0 converts resume to text
-3. **NER Processing**: BERT-base-NER extracts entities (name, position, experience)
-4. **Scoring Algorithm**:
-   - **Technical** (0-100): Based on tech keywords detected
-   - **Cultural** (0-100): Based on soft-skill keywords
-   - **Growth** (0-100): Based on education/certifications
-   - **Overall**: Weighted average (40% technical, 30% cultural, 30% growth)
-5. **Classification**: Strong Fit (≥75) | Trainable Fit (≥50) | Risky Fit (<50)
+1. **Multi-Format Upload**: PDF, DOCX, TXT, image files
+2. **OCR Extraction**: GOT-OCR 2.0 converts any format → high-quality text
+3. **NER Processing**: BERT-base-NER extracts name, position, experience, contact
+4. **Skill Detection**: Regex + keyword matching for 50+ tech/soft skills
+5. **Scoring**:
+   - **Technical** (0-100): Tech skills density
+   - **Cultural** (0-100): Soft skill indicators
+   - **Growth** (0-100): Education + certifications
+   - **Overall**: 40% technical, 30% cultural, 30% growth
+6. **Classification**: Strong Fit (≥75) | Trainable Fit (≥50) | Risky Fit (<50)
 
-### Password Security
-- Minimum 8 characters
-- Hashed with bcrypt via Passlib
-- **UTF-8 safe truncation** to 72 bytes before hashing (accommodates multi-byte characters)
-- Truncation applied consistently in both `hash_password()` and `verify_password()`
+### Database Persistence
+- **Candidates Table**: Stores `candidate_id`, `username`, `resume_text`, `analysis` (JSON)
+- **Auto-initialize**: Tables created on first backend startup
+- **Update Logic**: Resume re-upload upserts candidate record + image
 
-### Email Validation
-- Single source of truth: Pydantic `EmailStr` (RFC 5322 compliant)
-- Validated at API request boundary
+### Dashboard & Analytics
+- **My Analysis Page**: Personal resume preview, scores, strengths/weaknesses
+- **Candidate Search**: Query by Clerk ID or username, view analysis
+- **Responsive Charts**: Score breakdowns with interactive visualizations
 
 ## File Structure
 
 ### Backend
 ```
 backend/
-├── main.py                 # FastAPI app with 5 endpoints
-├── config/
-│   └── settings.py         # GOT-OCR model lazy loading
+├── main.py                 # FastAPI app, 6 endpoints, Clerk auth
 ├── src/
-│   ├── helper_funcs.py     # Auth, OCR, NER, database models
-│   ├── db_test.py          # Database introspection utility
-│   └── cuda_test.py        # GPU availability check
-├── resumes/                # Candidate resume storage (<candidate_id>.<ext>)
-└── pyproject.toml          # Python dependencies
+│   ├── database.py         # SQLAlchemy models, session management
+│   ├── helper_funcs.py     # OCR, NER, analysis scoring
+│   ├── cuda_test.py        # GPU availability check
+│   └── __pycache__/
+├── config/
+│   └── settings.py         # Model lazy loading, CUDA setup
+├── resumes/                # Resume file storage
+├── output_images/          # Generated resume preview images (.png)
+└── pyproject.toml
 ```
 
 ### Frontend
 ```
 frontend/
 ├── app/
-│   ├── page.tsx            # Home/role selection
-│   ├── candidate-login/    # Auth form
-│   ├── upload/             # Resume upload with drag-drop
-│   ├── dashboard/          # Recruiter stats dashboard
-│   └── candidates/         # Candidate search
-├── components/             # Reusable React components
-│   ├── Navbar.tsx
-│   ├── ThemeProvider.tsx
-│   ├── ParticleBackground.tsx
-│   ├── DashboardStats.tsx
-│   ├── ResumeChart.tsx
-│   ├── CandidateSearch.tsx
-│   └── CandidateReport.tsx
-└── package.json
+│   ├── page.tsx                # Home (role selection)
+│   ├── layout.tsx              # ClerkProvider wrapper
+│   ├── candidate-login/        # Clerk SignIn component
+│   ├── sign-up/                # Clerk SignUp component
+│   ├── upload/                 # Resume upload interface
+│   ├── dashboard/              # Recruiter stats
+│   ├── candidates/             # Candidate search
+│   └── analysis/               # Personal analysis (My Analysis tab)
+├── components/
+│   ├── Navbar.tsx              # Navigation with theme toggle
+│   ├── CandidateSearch.tsx     # Search form + real API call
+│   ├── CandidateReport.tsx     # Analysis display
+│   └── ...others
+├── package.json
+└── tsconfig.json
 ```
 
 ## Database Schema
 
-### Users Table
-```
-id: UUID (PRIMARY KEY)
-email: VARCHAR UNIQUE NOT NULL
-hashed_password: VARCHAR NOT NULL
-full_name: VARCHAR NULLABLE
-is_active: BOOLEAN DEFAULT true
-created_at: TIMESTAMP
-last_login: TIMESTAMP NULLABLE
+### Candidates Table
+```sql
+candidate_id VARCHAR PRIMARY KEY       -- Clerk user.id
+username VARCHAR INDEXED               -- Derived from Clerk email
+resume_text TEXT                       -- Full OCR-extracted text
+analysis JSON                          -- Complete analysis object
 ```
 
 ## Frontend Features
 
-### Dark Mode
-- System preference detection
-- Manual toggle in navbar
-- Persists to localStorage
-- Smooth transitions
+### Authentication Flow
+1. User selects candidate/recruiter role on home page
+2. Clicks "Sign In" → Clerk modal (email, OAuth, passkey)
+3. On signup, Clerk creates `user.id` (stable across sessions)
+4. Frontend stores Clerk session; API requests include JWT in header
+5. Backend validates JWT via JWKS, extracts `user_id` from `sub` claim
 
-### Particle Background
-- Interactive canvas animation (~1 particle per 12000 screen pixels)
-- Repels particles from cursor (200px influence radius)
-- Spawns 25-particle burst on click
-- Theme-aware colors (light/dark)
+### Analysis Dashboard
+- **Resume Preview**: Generated .png image of resume
+- **Score Breakdown**: Visual progress bars for technical/cultural/growth
+- **Skills**: Color-coded badges for strengths and improvement areas
+- **Classification**: Status badge (Strong/Trainable/Risky Fit)
+- **Update Button**: Re-upload resume to refresh analysis
+
+### Candidate Search
+- Search by Clerk user ID or username
+- Returns database-stored analysis
+- Recruiter-accessible (role-based if needed)
 
 ### Responsive Design
 - Mobile-first Tailwind CSS
-- Adaptive layouts (flex column on mobile, row on desktop)
-- Touch-friendly drag-drop upload interface
+- Dark mode with system preference detection
+- Particle background animation on home page
+- Drag-drop resume upload
+
+## See Also
+- **[Backend README](backend/README.md)** - Detailed setup, troubleshooting, CUDA/Poppler config
+- **[Frontend README](frontend/README.md)** - Development, build, linting
+- **[Database Guide](DATABASE_GUIDE.md)** - Schema, endpoints, flow diagrams
 
 ## Common Issues & Solutions
 
-### ImportError: No module named 'config'
-```bash
-# Use with PYTHONPATH when running backend scripts
-PYTHONPATH=$(pwd) uv run src/db_test.py
-```
+### "CLERK_JWKS_URL is not configured"
+- Set `CLERK_JWKS_URL` in `backend/.env` (format: `https://your-domain/.well-known/jwks.json`)
 
-### Bcrypt version incompatibility
-```bash
-# Install pinned version
-uv pip install "bcrypt==4.0.1"
-```
+### "Resume image not found" (404)
+- Image is generated during upload; if missing, re-upload resume
+- Check `backend/output_images/` directory for `{candidate_id}.png`
+
+### Poppler PDF error
+- Install Poppler: https://github.com/oschwartz10612/poppler-windows/releases
+- Update path in `backend/src/helper_funcs.py` line ~28
+
+### Docker PostgreSQL fails
+- Ensure Docker Desktop is running
+- Check port 5432 is not in use: `netstat -ano | findstr :5432`
+- Reset: `docker-compose down -v && docker-compose up -d`
 
 ### Poppler path not found
 - Update hardcoded path in `helper_funcs.py` (line ~80)

@@ -81,12 +81,6 @@ frontend/
 
 3. **Open in browser**: Navigate to [http://localhost:3000](http://localhost:3000) to see the application
 
-## Development Guide
-
-- **Editing Pages**: Modify files in the `app/` directory and the page will auto-update as you edit
-- **Creating Components**: Add reusable components in the `components/` directory
-- **Fonts**: This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) with the Geist font family
-
 ## Building for Production
 
 ```bash
