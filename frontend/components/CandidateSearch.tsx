@@ -14,6 +14,7 @@ interface SearchResult {
 
 export default function CandidateSearch() {
   const [candidateId, setCandidateId] = useState("");
+  const [hasSearched, setHasSearched] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateProfile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -29,7 +30,8 @@ export default function CandidateSearch() {
   const handleSearch = async (e?: FormEvent) => {
     if (e) e.preventDefault();
 
-    if (!candidateId.trim()) return;
+    const query = candidateId.trim();
+    if (!query) return;
 
     setIsLoading(true);
     setError("");
@@ -41,7 +43,7 @@ export default function CandidateSearch() {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       
       const response = await fetch(
-        `${apiUrl}/api/candidates/search?q=${encodeURIComponent(candidateId)}`,
+        `${apiUrl}/api/candidates/search?q=${encodeURIComponent(query)}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -62,20 +64,13 @@ export default function CandidateSearch() {
           count: number;
         };
         setSearchResults(data.results);
-        
-        // Auto-select if only one result
-        if (data.results.length === 1) {
-          setSelectedCandidate({
-            id: data.results[0].candidate_id,
-            ...data.results[0].analysis,
-          });
-        }
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "An error occurred while searching";
       setError(message);
       setSearchResults([]);
     } finally {
+      setHasSearched(true);
       setIsLoading(false);
     }
   };
@@ -102,13 +97,16 @@ export default function CandidateSearch() {
                 type="text"
                 placeholder="Search by ID, username, or name..."
                 value={candidateId}
-                onChange={(e) => setCandidateId(e.target.value)}
+                onChange={(e) => {
+                  setCandidateId(e.target.value);
+                  setHasSearched(false);
+                }}
                 className="ui-input"
               />
             </div>
 
             <button
-              onClick={() => handleSearch()}
+              type="submit"
               disabled={isLoading || !candidateId.trim()}
               className="ui-btn-primary min-w-36 px-6 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -200,13 +198,13 @@ export default function CandidateSearch() {
         </div>
       )}
 
-      {error && searchResults.length === 0 && !selectedCandidate && (
+      {hasSearched && error && searchResults.length === 0 && !selectedCandidate && (
         <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-300">
           {error}
         </div>
       )}
 
-      {!selectedCandidate && !isLoading && !error && candidateId && searchResults.length === 0 && (
+      {hasSearched && !selectedCandidate && !isLoading && !error && candidateId && searchResults.length === 0 && (
         <div className="ui-card p-6 text-center text-sm text-[var(--foreground-muted)]">
           No candidates found. Try a different search term.
         </div>
