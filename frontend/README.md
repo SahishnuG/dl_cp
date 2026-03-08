@@ -49,7 +49,16 @@ frontend/
    bun install
    ```
 
-2. **Run the development server**:
+2. **Set env vars**:
+   Create .env.local in frontend/ with the following format:
+   ```bash
+   # Backend API URL
+   NEXT_PUBLIC_API_URL=http://localhost:8000
+
+   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxx
+   ```
+
+3. **Run the development server**:
    ```bash
    npm run dev
    # or
@@ -60,7 +69,7 @@ frontend/
    bun dev
    ```
 
-3. **Open in browser**: Navigate to [http://localhost:3000](http://localhost:3000) to see the application
+4. **Open in browser**: Navigate to [http://localhost:3000](http://localhost:3000) to see the application
 
 ## Building for Production
 
