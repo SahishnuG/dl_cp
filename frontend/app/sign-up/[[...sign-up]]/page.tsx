@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
+type OAuthStrategy = "oauth_google" | "oauth_github" | "oauth_discord";
+
 export default function SignUpPage() {
   const router = useRouter();
   const { isLoaded, userId } = useAuth();
@@ -51,6 +53,22 @@ export default function SignUpPage() {
       setError(err.errors?.[0]?.message || "Sign up failed. Please try again.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleOAuthSignUp = async (strategy: OAuthStrategy) => {
+    if (!signUpLoaded) return;
+
+    setError("");
+
+    try {
+      await signUp.authenticateWithRedirect({
+        strategy,
+        redirectUrl: "/sso-callback",
+        redirectUrlComplete: "/upload",
+      });
+    } catch (err: any) {
+      setError(err.errors?.[0]?.message || "Social sign up failed. Please try again.");
     }
   };
 
@@ -136,6 +154,30 @@ export default function SignUpPage() {
             <div className="relative flex justify-center text-sm">
               <span className="bg-[#0a0a0c] px-2 text-[var(--foreground-muted)]">or</span>
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <button
+              type="button"
+              onClick={() => handleOAuthSignUp("oauth_google")}
+              className="ui-btn-secondary w-full px-3 py-2 text-sm"
+            >
+              Google
+            </button>
+            <button
+              type="button"
+              onClick={() => handleOAuthSignUp("oauth_github")}
+              className="ui-btn-secondary w-full px-3 py-2 text-sm"
+            >
+              GitHub
+            </button>
+            <button
+              type="button"
+              onClick={() => handleOAuthSignUp("oauth_discord")}
+              className="ui-btn-secondary w-full px-3 py-2 text-sm"
+            >
+              Discord
+            </button>
           </div>
 
           <div>
