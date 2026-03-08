@@ -5,6 +5,16 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth, useUser, useClerk } from "@clerk/nextjs";
 
+async function parseJsonSafely<T>(response: Response): Promise<T> {
+  const raw = await response.text();
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    const snippet = raw.slice(0, 180).replace(/\s+/g, " ").trim();
+    throw new Error(`Expected JSON response, got: ${snippet || "<empty response>"}`);
+  }
+}
+
 export default function UploadResume() {
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -104,18 +114,22 @@ export default function UploadResume() {
         throw new Error("Authentication token missing");
       }
 
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await fetch("http://localhost:8000/api/upload-resume", {
+      const response = await fetch(`${apiUrl}/api/upload-resume`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+          "ngrok-skip-browser-warning": "true",
         },
         body: formData,
       });
 
-      const data = await response.json();
+      const data = await parseJsonSafely<{ detail?: string }>(response);
 
       if (!response.ok) {
         throw new Error(data.detail || "Upload failed");

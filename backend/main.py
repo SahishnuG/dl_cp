@@ -8,6 +8,8 @@ from sqlalchemy.orm import Session
 import jwt
 import os
 import shutil
+import json
+from urllib import error, request
 from src.helper_funcs import (
     read_resume,
     analyze_resume,
@@ -19,6 +21,8 @@ load_dotenv(find_dotenv(".env"))
 CLERK_JWKS_URL = os.getenv("CLERK_JWKS_URL", "")
 CLERK_ISSUER = os.getenv("CLERK_ISSUER", "")
 CLERK_AUDIENCE = os.getenv("CLERK_AUDIENCE", "")
+CLERK_SECRET_KEY = os.getenv("CLERK_SECRET_KEY", "")
+CLERK_API_BASE = os.getenv("CLERK_API_BASE", "https://api.clerk.com/v1")
 
 app = FastAPI(
     title="Karmafit API",
@@ -103,6 +107,59 @@ async def health_check():
     return {"status": "healthy"}
 
 
+def fetch_clerk_user(user_id: str) -> Optional[dict]:
+    if not CLERK_SECRET_KEY:
+        print("[clerk] CLERK_SECRET_KEY missing; skipping user lookup")
+        return None
+
+    user_url = f"{CLERK_API_BASE}/users/{user_id}"
+    req = request.Request(
+        user_url,
+        headers={
+            "Authorization": f"Bearer {CLERK_SECRET_KEY}",
+            "Accept": "application/json",
+        },
+    )
+
+    try:
+        with request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except error.HTTPError as exc:
+        print(f"[clerk] user lookup failed ({exc.code}) for {user_id}")
+    except Exception as exc:
+        print(f"[clerk] user lookup error for {user_id}: {exc}")
+    return None
+
+
+def extract_username_from_user(user: Optional[dict], user_id: str) -> str:
+    if not user:
+        return user_id
+
+    username = user.get("username")
+    if isinstance(username, str) and username.strip():
+        return username.strip()
+
+    primary_email_id = user.get("primary_email_address_id")
+    email_addresses = user.get("email_addresses", [])
+    if isinstance(email_addresses, list):
+        primary_email = None
+        for email_obj in email_addresses:
+            if not isinstance(email_obj, dict):
+                continue
+            if email_obj.get("id") == primary_email_id:
+                primary_email = email_obj.get("email_address")
+                break
+        if not primary_email:
+            for email_obj in email_addresses:
+                if isinstance(email_obj, dict) and email_obj.get("email_address"):
+                    primary_email = email_obj.get("email_address")
+                    break
+        if isinstance(primary_email, str) and primary_email.strip():
+            return primary_email.split("@")[0].strip()
+
+    return user_id
+
+
 @app.post("/api/upload-resume")
 async def upload_resume(
     file: UploadFile = File(...),
@@ -115,15 +172,14 @@ async def upload_resume(
     """
     try:
         candidate_id = auth_data["user_id"]
-        # Get username from Clerk payload (always present)
-        payload = auth_data["payload"]
-        username = (
-            payload.get("username") or
-            payload.get("first_name") or
-            payload.get("email", "").split("@")[0] or
-            "user"
-        )
+        # print("[auth_data] fields:", list(auth_data.keys()))
+        # for key, value in auth_data.items():
+        #     print(f"[auth_data] {key}: {value}")
 
+        payload = auth_data["payload"]
+        clerk_user = fetch_clerk_user(candidate_id)
+        username = extract_username_from_user(clerk_user, candidate_id)
+        
         # Get file extension
         file_extension = os.path.splitext(file.filename)[1].lower()
         

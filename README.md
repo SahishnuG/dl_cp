@@ -48,6 +48,7 @@ Karmafit is a full-stack intelligent resume analysis and candidate screening pla
    CLERK_ISSUER=https://your-clerk-domain
    CLERK_AUDIENCE=your-audience
    NEXT_PUBLIC_API_URL=http://localhost:8000
+   CLERK_SECRET_KEY=sk_test_xxx
    ```
 
    Create `frontend/.env.local`:
@@ -65,18 +66,13 @@ Karmafit is a full-stack intelligent resume analysis and candidate screening pla
 
 3. **Backend Setup**
    ```bash
-   cd backend
-   uv sync
-   uv pip install torch --index-url https://download.pytorch.org/whl/cu121
-   uv run main.py
+   see backend/README.md
    ```
    API runs on `http://localhost:8000`
 
 4. **Frontend Setup**
    ```bash
-   cd frontend
-   npm install
-   npm run dev
+   see frontend/README.md
    ```
    Frontend runs on `http://localhost:3000`
 

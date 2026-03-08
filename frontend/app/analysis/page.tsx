@@ -19,6 +19,16 @@ interface AnalysisData {
   weaknesses: string[];
 }
 
+async function parseJsonSafely<T>(response: Response): Promise<T> {
+  const raw = await response.text();
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    const snippet = raw.slice(0, 180).replace(/\s+/g, " ").trim();
+    throw new Error(`Expected JSON response, got: ${snippet || "<empty response>"}`);
+  }
+}
+
 export default function AnalysisPage() {
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const { user } = useUser();
@@ -38,6 +48,8 @@ export default function AnalysisPage() {
       const response = await fetch(`${apiUrl}/api/candidates/${candidateId}/full-analysis`, {
         headers: {
           Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+          "ngrok-skip-browser-warning": "true",
         },
       });
 
@@ -50,13 +62,14 @@ export default function AnalysisPage() {
         return;
       }
 
-      const data = (await response.json()) as { analysis: AnalysisData; resume_image_url?: string };
+      const data = await parseJsonSafely<{ analysis: AnalysisData; resume_image_url?: string }>(response);
       setAnalysis(data.analysis);
 
       if (data.resume_image_url) {
         const imageResponse = await fetch(`${apiUrl}${data.resume_image_url}`, {
           headers: {
             Authorization: `Bearer ${token}`,
+            "ngrok-skip-browser-warning": "true",
           },
         });
 

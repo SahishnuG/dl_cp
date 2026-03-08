@@ -102,6 +102,171 @@ import re
 import json
 from transformers import pipeline, AutoTokenizer, AutoModelForTokenClassification
 
+try:
+    from pylatexenc.latexwalker import LatexWalker, LatexMacroNode
+except Exception:
+    LatexWalker = None
+    LatexMacroNode = None
+
+def is_latex(text: str) -> bool:
+    """
+    Detect whether the input text is likely LaTeX.
+
+    Strategy:
+    1) Fast lightweight heuristic (regex markers)
+    """
+    if not isinstance(text, str) or not text.strip():
+        return False
+
+    sample = text[:50000]
+
+    # Strong markers are enough by themselves.
+    strong_patterns = [
+        r'\\documentclass(?:\[[^\]]*\])?\{[^}]+\}',
+        r'\\usepackage(?:\[[^\]]*\])?\{[^}]+\}',
+        r'\\begin\{[^}]+\}',
+        r'\\end\{[^}]+\}',
+    ]
+    if any(re.search(pattern, sample) for pattern in strong_patterns):
+        return True
+
+    # Lightweight heuristic (supports starred commands like \section*{}).
+    heuristic_patterns = [
+        r'\\title\*?\{',
+        r'\\section\*?\{',
+        r'\\subsection\*?\{',
+        r'\\subsubsection\*?\{',
+        r'\\item\b',
+        r'\\text(?:bf|it|tt|sc)\{',
+        r'\\[a-zA-Z]{2,}\*?\{',
+        r'\$[^\n$]{1,120}\$',
+        r'\\\(|\\\)|\\\[|\\\]',
+    ]
+
+    score = sum(bool(re.search(pattern, sample)) for pattern in heuristic_patterns)
+    if score < 2:
+        return False
+
+    return True
+
+
+def parse_latex_sections(latex_text: str):
+    """
+    Parse LaTeX sections dynamically and treat the preamble
+    as a normal section.
+    """
+    sections = {}
+
+    # Fallback path when pylatexenc is unavailable.
+    if LatexWalker is None or LatexMacroNode is None:
+        parts = re.split(r'\\section\*?\{([^}]*)\}', latex_text)
+        sections["__preamble__"] = parts[0].strip()
+        for i in range(1, len(parts), 2):
+            title = parts[i].strip()
+            content = parts[i + 1].strip()
+            sections[title] = content
+        return sections
+
+    section_markers = []
+
+    def _node_source(node):
+        pos = getattr(node, "pos", None)
+        length = getattr(node, "len", None)
+        if isinstance(pos, int) and isinstance(length, int) and length >= 0:
+            return latex_text[pos:pos + length]
+        return ""
+
+    def _extract_section_title(node):
+        nodeargd = getattr(node, "nodeargd", None)
+        if nodeargd is None:
+            return ""
+
+        argnlist = getattr(nodeargd, "argnlist", None)
+        if not argnlist or argnlist[0] is None:
+            return ""
+
+        raw = _node_source(argnlist[0]).strip()
+        if raw.startswith("{") and raw.endswith("}") and len(raw) >= 2:
+            return raw[1:-1].strip()
+        return raw
+
+    def walk_nodes(nodes):
+        if not nodes:
+            return
+
+        for node in nodes:
+            if isinstance(node, LatexMacroNode) and node.macroname == "section":
+                start_pos = getattr(node, "pos", None)
+                node_len = getattr(node, "len", None)
+                if not isinstance(start_pos, int) or not isinstance(node_len, int) or node_len <= 0:
+                    continue
+
+                title = _extract_section_title(node)
+                section_markers.append((start_pos, start_pos + node_len, title))
+
+            child_nodes = getattr(node, "nodelist", None)
+            if child_nodes:
+                walk_nodes(child_nodes)
+
+            nodeargd = getattr(node, "nodeargd", None)
+            if nodeargd is not None:
+                argnlist = getattr(nodeargd, "argnlist", None)
+                if argnlist:
+                    for arg_node in argnlist:
+                        if arg_node is None:
+                            continue
+                        nested = getattr(arg_node, "nodelist", None)
+                        if nested:
+                            walk_nodes(nested)
+
+    try:
+        parsed_nodes, _, _ = LatexWalker(latex_text).get_latex_nodes()
+        walk_nodes(parsed_nodes)
+    except Exception:
+        parsed_nodes = None
+
+    if not section_markers:
+        parts = re.split(r'\\section\*?\{([^}]*)\}', latex_text)
+        sections["__preamble__"] = parts[0].strip()
+        for i in range(1, len(parts), 2):
+            title = parts[i].strip()
+            content = parts[i + 1].strip()
+            sections[title] = content
+        return sections
+
+    section_markers.sort(key=lambda item: item[0])
+    sections["__preamble__"] = latex_text[:section_markers[0][0]].strip()
+
+    for idx, (_, command_end, title) in enumerate(section_markers):
+        next_start = section_markers[idx + 1][0] if idx + 1 < len(section_markers) else len(latex_text)
+        sections[title] = latex_text[command_end:next_start].strip()
+
+    return sections
+
+def ner_on_latex_sections(resume_text):
+    """
+    Runs NER on each LaTeX section separately and
+    returns a single combined entity list.
+    """
+
+    sections = parse_latex_sections(resume_text)
+
+    all_entities = []
+
+    for section_name, content in sections.items():
+
+        entities = ner_pipeline(content)
+
+        for ent in entities:
+            ent_copy = ent.copy()
+
+            # optional but useful for debugging
+            ent_copy["section"] = section_name
+
+            all_entities.append(ent_copy)
+
+    return all_entities
+
 # Load RoBERTa NER model for resume parsing
 ner_tokenizer = AutoTokenizer.from_pretrained("dslim/bert-base-NER")
 ner_model = AutoModelForTokenClassification.from_pretrained("dslim/bert-base-NER")
@@ -118,9 +283,14 @@ def analyze_resume(resume_text, candidate_id):
     Returns:
         dict: Structured resume data with extracted fields
     """
-    
-    # Extract entities using NER
-    entities = ner_pipeline(resume_text)
+    print(f"Analyzing resume\n{resume_text[:500]}...")  # Print first 500 chars for debugging
+    if(is_latex(resume_text)):
+        print("Detected LaTeX format.")
+        entities = ner_on_latex_sections(resume_text)
+    else:
+        print("Detected plain text format.")
+        # Extract entities using NER
+        entities = ner_pipeline(resume_text)
     
     # Extract name (first PERSON entity)
     name = ""

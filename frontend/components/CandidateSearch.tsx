@@ -12,6 +12,16 @@ interface SearchResult {
   analysis: Omit<CandidateProfile, "id">;
 }
 
+async function parseJsonSafely<T>(response: Response): Promise<T> {
+  const raw = await response.text();
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    const snippet = raw.slice(0, 180).replace(/\s+/g, " ").trim();
+    throw new Error(`Expected JSON response, got: ${snippet || "<empty response>"}`);
+  }
+}
+
 export default function CandidateSearch() {
   const [candidateId, setCandidateId] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
@@ -47,6 +57,8 @@ export default function CandidateSearch() {
         {
           headers: {
             Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+            "ngrok-skip-browser-warning": "true",
           },
         }
       );
@@ -59,10 +71,10 @@ export default function CandidateSearch() {
           throw new Error("Failed to search candidate");
         }
       } else {
-        const data = (await response.json()) as {
+        const data = await parseJsonSafely<{
           results: SearchResult[];
           count: number;
-        };
+        }>(response);
         setSearchResults(data.results);
       }
     } catch (err: unknown) {
