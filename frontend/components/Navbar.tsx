@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SignInButton, SignUpButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { dark } from '@clerk/ui/themes'
 
 export default function Navbar() {
@@ -96,12 +96,12 @@ export default function Navbar() {
               />
             </SignedIn>
             <SignedOut>
-              <SignInButton mode="modal">
-                <button className="ui-btn-secondary px-4 py-2 text-sm">Sign in</button>
-              </SignInButton>
-              <SignUpButton mode="modal">
-                <button className="ui-btn-primary px-4 py-2 text-sm">Sign up</button>
-              </SignUpButton>
+              <Link href="/candidate-login" className="ui-btn-secondary px-4 py-2 text-sm">
+                Sign in
+              </Link>
+              <Link href="/sign-up" className="ui-btn-primary px-4 py-2 text-sm">
+                Sign up
+              </Link>
             </SignedOut>
           </div>
         </div>
