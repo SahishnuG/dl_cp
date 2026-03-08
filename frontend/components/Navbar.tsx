@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { SignInButton, SignUpButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { dark } from '@clerk/ui/themes'
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -45,25 +46,62 @@ export default function Navbar() {
           <div className="flex items-center gap-3">
             <SignedIn>
               <UserButton
+                userProfileProps={{
+                  appearance: {
+                    baseTheme: dark,
+                    variables: {
+                      colorPrimary: "#5e6ad2",
+                      colorBackground: "#0a0a0c",
+                      colorInputBackground: "#0f0f12",
+                      colorInputText: "#edecef",
+                      colorText: "#edecef",
+                      colorTextSecondary: "#8a8f98",
+                      colorDanger: "#ef4444",
+                      borderRadius: "0.5rem",
+                      fontFamily: "var(--font-geist-sans), Inter, sans-serif",
+                    },
+                    elements: {
+                      footer: "hidden",
+                      footerAction: "hidden",
+                      footerPages: "hidden",
+                      card: "bg-[#0a0a0c] border border-white/10",
+                      cardBox: "bg-[#0a0a0c]",
+                      rootBox: "bg-[#0a0a0c]",
+                    },
+                  },
+                }}
                 appearance={{
+                  baseTheme: dark,
+                  variables: {
+                    colorPrimary: "#5e6ad2",
+                    colorBackground: "#0a0a0c",
+                    colorInputBackground: "#0f0f12",
+                    colorInputText: "#edecef",
+                    colorText: "#edecef",
+                    colorTextSecondary: "#8a8f98",
+                    colorDanger: "#ef4444",
+                    borderRadius: "0.5rem",
+                    fontFamily: "var(--font-geist-sans), Inter, sans-serif",
+                  },
                   elements: {
-                    avatarBox: "w-9 h-9",
-                    userButtonPopoverCard: "bg-[#0a0a0c] border border-white/10",
-                    userButtonPopoverActionButton: "text-white hover:bg-white/5",
-                    userButtonPopoverActionButtonText: "text-[#edecef]",
-                    userButtonPopoverActionButtonIcon: "text-[#8a8f98]",
-                    userButtonPopoverFooter: "hidden",
+                    footer: "hidden",
+                    footerAction: "hidden",
+                    footerPages: "hidden",
+
+                    card: "bg-[#0a0a0c]",
+                    cardBox: "bg-[#0a0a0c]",
+                    rootBox: "bg-[#0a0a0c]",
                   },
                 }}
               />
             </SignedIn>
             <SignedOut>
-              <Link href="/candidate-login" className="ui-btn-secondary px-4 py-2 text-sm">
-                Sign in
-              </Link>
-              <Link href="/sign-up" className="ui-btn-primary px-4 py-2 text-sm">
-                Sign up
-              </Link>
+              <SignInButton mode="modal">
+                <button className="ui-btn-secondary px-4 py-2 text-sm">Sign in</button>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <button className="ui-btn-primary px-4 py-2 text-sm">Sign up</button>
+              </SignUpButton>
             </SignedOut>
           </div>
         </div>
