@@ -121,7 +121,8 @@ export default function UploadResume() {
         throw new Error(data.detail || "Upload failed");
       }
 
-      alert("Resume uploaded successfully! Analysis: " + JSON.stringify(data.analysis, null, 2));
+      // Redirect to analysis page after successful upload
+      router.push("/analysis");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Upload failed";
       setError(message);
