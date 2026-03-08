@@ -50,7 +50,7 @@ frontend/
    ```
 
 2. **Set env vars**:  
-   Create a ```.env.local`` file in frontend/ with the following format:
+   Create a ```.env.local``` file in frontend/ with the following format:
    ```bash
    # Backend API URL
    NEXT_PUBLIC_API_URL=http://localhost:8000
