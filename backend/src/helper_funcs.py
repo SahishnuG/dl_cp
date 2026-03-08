@@ -102,12 +102,6 @@ import re
 import json
 from transformers import pipeline, AutoTokenizer, AutoModelForTokenClassification
 
-try:
-    from pylatexenc.latexwalker import LatexWalker, LatexMacroNode
-except Exception:
-    LatexWalker = None
-    LatexMacroNode = None
-
 def is_latex(text: str) -> bool:
     """
     Detect whether the input text is likely LaTeX.
@@ -152,96 +146,53 @@ def is_latex(text: str) -> bool:
 
 def parse_latex_sections(latex_text: str):
     """
-    Parse LaTeX sections dynamically and treat the preamble
-    as a normal section.
+    Parse LaTeX sections and preserve a preamble bucket.
+    Uses regex section boundaries for reliable resume segmentation.
     """
     sections = {}
+    pattern = re.compile(r'\\section\*?\{([^}]*)\}')
+    matches = list(pattern.finditer(latex_text))
 
-    # Fallback path when pylatexenc is unavailable.
-    if LatexWalker is None or LatexMacroNode is None:
-        parts = re.split(r'\\section\*?\{([^}]*)\}', latex_text)
-        sections["__preamble__"] = parts[0].strip()
-        for i in range(1, len(parts), 2):
-            title = parts[i].strip()
-            content = parts[i + 1].strip()
-            sections[title] = content
+    if not matches:
+        sections["__preamble__"] = latex_text.strip()
         return sections
 
-    section_markers = []
+    sections["__preamble__"] = latex_text[:matches[0].start()].strip()
 
-    def _node_source(node):
-        pos = getattr(node, "pos", None)
-        length = getattr(node, "len", None)
-        if isinstance(pos, int) and isinstance(length, int) and length >= 0:
-            return latex_text[pos:pos + length]
-        return ""
-
-    def _extract_section_title(node):
-        nodeargd = getattr(node, "nodeargd", None)
-        if nodeargd is None:
-            return ""
-
-        argnlist = getattr(nodeargd, "argnlist", None)
-        if not argnlist or argnlist[0] is None:
-            return ""
-
-        raw = _node_source(argnlist[0]).strip()
-        if raw.startswith("{") and raw.endswith("}") and len(raw) >= 2:
-            return raw[1:-1].strip()
-        return raw
-
-    def walk_nodes(nodes):
-        if not nodes:
-            return
-
-        for node in nodes:
-            if isinstance(node, LatexMacroNode) and node.macroname == "section":
-                start_pos = getattr(node, "pos", None)
-                node_len = getattr(node, "len", None)
-                if not isinstance(start_pos, int) or not isinstance(node_len, int) or node_len <= 0:
-                    continue
-
-                title = _extract_section_title(node)
-                section_markers.append((start_pos, start_pos + node_len, title))
-
-            child_nodes = getattr(node, "nodelist", None)
-            if child_nodes:
-                walk_nodes(child_nodes)
-
-            nodeargd = getattr(node, "nodeargd", None)
-            if nodeargd is not None:
-                argnlist = getattr(nodeargd, "argnlist", None)
-                if argnlist:
-                    for arg_node in argnlist:
-                        if arg_node is None:
-                            continue
-                        nested = getattr(arg_node, "nodelist", None)
-                        if nested:
-                            walk_nodes(nested)
-
-    try:
-        parsed_nodes, _, _ = LatexWalker(latex_text).get_latex_nodes()
-        walk_nodes(parsed_nodes)
-    except Exception:
-        parsed_nodes = None
-
-    if not section_markers:
-        parts = re.split(r'\\section\*?\{([^}]*)\}', latex_text)
-        sections["__preamble__"] = parts[0].strip()
-        for i in range(1, len(parts), 2):
-            title = parts[i].strip()
-            content = parts[i + 1].strip()
-            sections[title] = content
-        return sections
-
-    section_markers.sort(key=lambda item: item[0])
-    sections["__preamble__"] = latex_text[:section_markers[0][0]].strip()
-
-    for idx, (_, command_end, title) in enumerate(section_markers):
-        next_start = section_markers[idx + 1][0] if idx + 1 < len(section_markers) else len(latex_text)
-        sections[title] = latex_text[command_end:next_start].strip()
+    for idx, match in enumerate(matches):
+        title = match.group(1).strip() or f"section_{idx+1}"
+        content_start = match.end()
+        content_end = matches[idx + 1].start() if idx + 1 < len(matches) else len(latex_text)
+        sections[title] = latex_text[content_start:content_end].strip()
 
     return sections
+
+
+def strip_latex_markup(text: str) -> str:
+    """
+    Convert LaTeX-heavy text into plain text for NER.
+    Keeps human-readable words and removes commands/formatting tokens.
+    """
+    if not isinstance(text, str) or not text.strip():
+        return ""
+
+    cleaned = text
+    # Drop comments.
+    cleaned = re.sub(r'(?m)%.*$', ' ', cleaned)
+    # Replace common sectioning/item commands with spaces.
+    cleaned = re.sub(r'\\(?:section|subsection|subsubsection|paragraph|subparagraph)\*?\{[^}]*\}', ' ', cleaned)
+    cleaned = re.sub(r'\\item\b', ' ', cleaned)
+    # Flatten command arguments like \textbf{Python} -> Python.
+    cleaned = re.sub(r'\\[a-zA-Z]+\*?(?:\[[^\]]*\])?\{([^}]*)\}', r' \1 ', cleaned)
+    # Remove remaining commands, escapes, braces, and math delimiters.
+    cleaned = re.sub(r'\\[a-zA-Z]+\*?(?:\[[^\]]*\])?', ' ', cleaned)
+    cleaned = re.sub(r'[{}$]', ' ', cleaned)
+    cleaned = re.sub(r'\\[\[\]()]', ' ', cleaned)
+    cleaned = re.sub(r'\\', ' ', cleaned)
+    # Normalize whitespace.
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+    print(f"Cleaned LaTeX text for NER:\n{cleaned[:500]}...")  # Print first 500 chars for debugging
+    return cleaned
 
 def ner_on_latex_sections(resume_text):
     """
@@ -254,8 +205,20 @@ def ner_on_latex_sections(resume_text):
     all_entities = []
 
     for section_name, content in sections.items():
+        heading_label = section_name.replace("_", " ").strip()
+        heading_label = re.sub(r"\s+", " ", heading_label)
 
-        entities = ner_pipeline(content)
+        plain_content = strip_latex_markup(content)
+        if not plain_content:
+            continue
+
+        if heading_label and heading_label != "__preamble__":
+            # Keep heading semantics in plain language so NER sees section context.
+            plain_content = f"Section heading: {heading_label}. {plain_content}"
+        elif heading_label == "__preamble__":
+            plain_content = f"Section heading: Preamble. {plain_content}"
+
+        entities = ner_pipeline(plain_content)
 
         for ent in entities:
             ent_copy = ent.copy()
@@ -268,9 +231,52 @@ def ner_on_latex_sections(resume_text):
     return all_entities
 
 # Load RoBERTa NER model for resume parsing
-ner_tokenizer = AutoTokenizer.from_pretrained("dslim/bert-base-NER")
-ner_model = AutoModelForTokenClassification.from_pretrained("dslim/bert-base-NER")
+ner_tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/roberta-large-ner-english")
+ner_model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/roberta-large-ner-english")
 ner_pipeline = pipeline("ner", model=ner_model, tokenizer=ner_tokenizer, aggregation_strategy="simple")
+
+
+def extract_name_from_latex_title(resume_text: str) -> str:
+    match = re.search(r'\\title\*?\{([^}]*)\}', resume_text, re.DOTALL)
+    if not match:
+        return ""
+
+    title_text = match.group(1).strip()
+    title_text = re.sub(r'\\[a-zA-Z]+\*?(?:\[[^\]]*\])?\{[^}]*\}', ' ', title_text)
+    title_text = re.sub(r'\\[a-zA-Z]+\*?', ' ', title_text)
+    title_text = re.sub(r'\s+', ' ', title_text).strip()
+    return title_text
+
+
+def extract_name_from_entities(entities) -> str:
+    full_name_candidate = ""
+    single_name_candidate = ""
+
+    for entity in entities:
+        if entity.get('entity_group') != 'PER':
+            continue
+
+        raw_name = str(entity.get('word', '')).strip()
+        # Keep alphabetic characters, spaces, apostrophes and hyphens for names.
+        cleaned = re.sub(r"[^A-Za-z\s'\-]", ' ', raw_name)
+        cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+        if not cleaned:
+            continue
+
+        alpha_chars = re.sub(r'[^A-Za-z]', '', cleaned)
+        if len(alpha_chars) < 3:
+            # Guardrail: ignore very short PER tokens (e.g., "A", "Sa").
+            continue
+
+        parts = [p for p in cleaned.split(' ') if p]
+        if len(parts) >= 2 and all(re.fullmatch(r"[A-Za-z][A-Za-z'\-]*", p) for p in parts):
+            full_name_candidate = ' '.join(parts)
+            break
+
+        if not single_name_candidate and re.fullmatch(r"[A-Za-z][A-Za-z'\-]*", cleaned):
+            single_name_candidate = cleaned
+
+    return full_name_candidate or single_name_candidate
 
 def analyze_resume(resume_text, candidate_id):
     """
@@ -284,21 +290,23 @@ def analyze_resume(resume_text, candidate_id):
         dict: Structured resume data with extracted fields
     """
     print(f"Analyzing resume\n{resume_text[:500]}...")  # Print first 500 chars for debugging
-    if(is_latex(resume_text)):
+    latex_resume = is_latex(resume_text)
+    if(latex_resume):
         print("Detected LaTeX format.")
         entities = ner_on_latex_sections(resume_text)
     else:
         print("Detected plain text format.")
         # Extract entities using NER
         entities = ner_pipeline(resume_text)
+
+    # Extract name: prefer guarded NER first, then fallback to Latex title.
     
-    # Extract name (first PERSON entity)
-    name = ""
     for entity in entities:
         print(f"Entity: {entity['word']}, Label: {entity['entity_group']}")
-        if entity['entity_group'] == 'PER':
-            name = entity['word']
-            break
+
+    name = extract_name_from_entities(entities)
+    if not name:
+        name = extract_name_from_latex_title(resume_text) if latex_resume else ""
     
     # Extract email using regex
     email = ""
@@ -306,12 +314,7 @@ def analyze_resume(resume_text, candidate_id):
     email_match = re.search(email_pattern, resume_text)
     if email_match:
         email = email_match.group(0)
-    
-    # Extract phone number
-    phone_pattern = r'(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}'
-    phone_match = re.search(phone_pattern, resume_text)
-    phone = phone_match.group(0) if phone_match else ""
-    
+
     # Extract experience (years)
     experience = ""
     exp_patterns = [
