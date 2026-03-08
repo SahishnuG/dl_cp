@@ -49,8 +49,8 @@ frontend/
    bun install
    ```
 
-2. **Set env vars**:
-   Create .env.local in frontend/ with the following format:
+2. **Set env vars**:  
+   Create a ```.env.local`` file in frontend/ with the following format:
    ```bash
    # Backend API URL
    NEXT_PUBLIC_API_URL=http://localhost:8000
