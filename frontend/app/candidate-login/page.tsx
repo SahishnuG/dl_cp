@@ -1,18 +1,49 @@
 "use client";
 
-import { SignIn, useAuth } from "@clerk/nextjs";
-import { useEffect } from "react";
+import { useSignIn, useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 
 export default function CandidateLogin() {
-  const { isLoaded, userId } = useAuth();
   const router = useRouter();
+  const { isLoaded, userId } = useAuth();
+  const { signIn, isLoaded: signInLoaded, setActive } = useSignIn();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (isLoaded && userId) {
       router.push("/upload");
     }
   }, [isLoaded, userId, router]);
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!signInLoaded) return;
+
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const result = await signIn.create({
+        identifier: email,
+        password,
+      });
+
+      if (result.status === "complete") {
+        setActive({ session: result.createdSessionId });
+        router.push("/upload");
+      }
+    } catch (err: any) {
+      setError(err.errors?.[0]?.message || "Sign in failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="relative flex min-h-[calc(100vh-5rem)] items-center justify-center overflow-hidden py-12">
@@ -29,25 +60,72 @@ export default function CandidateLogin() {
             Candidate Access
           </h2>
           <p className="mt-2 text-[var(--foreground-muted)]">
-            Sign in or sign up with Clerk to continue
+            Sign in to upload and analyze your resume
           </p>
         </div>
 
-        <div className="ui-card ui-spotlight p-6">
-          <SignIn
-            routing="hash"
-            forceRedirectUrl="/upload"
-            fallbackRedirectUrl="/upload"
-            signUpUrl="/sign-up"
-            appearance={{
-              elements: {
-                footer: "hidden",
-                footerAction: "hidden",
-                footerActionText: "hidden",
-                developmentModeWarning: "hidden",
-              },
-            }}
-          />
+        <div className="ui-card ui-spotlight p-6 space-y-4">
+          <form onSubmit={handleSignIn} className="space-y-4">
+            {error && (
+              <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-400">
+                {error}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="ui-input w-full"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="ui-input w-full"
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading || !signInLoaded}
+              className="ui-btn-primary w-full px-4 py-3"
+            >
+              {isLoading ? "Signing in..." : "Sign In"}
+            </button>
+          </form>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-white/10" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="bg-[#0a0a0c] px-2 text-[var(--foreground-muted)]">or</span>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-center text-sm text-[var(--foreground-muted)]">
+              Don't have an account?{" "}
+              <Link href="/sign-up" className="text-[var(--accent)] hover:text-[var(--accent-bright)] font-medium">
+                Sign up
+              </Link>
+            </p>
+          </div>
         </div>
 
         <div className="text-center text-xs text-[var(--foreground-muted)]">

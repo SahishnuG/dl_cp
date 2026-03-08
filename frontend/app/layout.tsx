@@ -1,6 +1,5 @@
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
-import { dark } from "@clerk/ui/themes";
 import { Geist, Geist_Mono } from "next/font/google";
 import Navbar from "@/components/Navbar";
 import ParticleBackground from "@/components/ParticleBackground";
@@ -26,25 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider
-      appearance={{
-        baseTheme: dark,
-        variables: {
-          colorPrimary: "#5e6ad2",
-          colorBackground: "#0a0a0c",
-          colorInputBackground: "#0f0f12",
-          colorInputText: "#edecef",
-          colorText: "#edecef",
-          colorTextSecondary: "#8a8f98",
-          colorDanger: "#ef4444",
-          borderRadius: "0.5rem",
-          fontFamily: "var(--font-geist-sans), Inter, sans-serif",
-        },
-        elements: {
-          footer: "hidden",
-        },
-      }}
-    >
+    <ClerkProvider>
       <html
         lang="en"
         className="dark"
