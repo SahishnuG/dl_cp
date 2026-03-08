@@ -20,5 +20,5 @@ RUN rm -rf /root/.cache/uv /root/.cache/pip
 # Copy app source
 COPY . .
 
-# Railway provides PORT at runtime
-CMD ["sh", "-c", "uv run uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Render/Railway provide PORT at runtime; default to 8000 for local docker runs
+CMD ["sh", "-lc", "PORT=${PORT:-8000}; exec uv run uvicorn main:app --host 0.0.0.0 --port \"$PORT\""]
