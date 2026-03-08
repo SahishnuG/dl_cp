@@ -4,7 +4,6 @@ WORKDIR /app
 
 # System deps needed for some Python/image packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
     git \
     && rm -rf /var/lib/apt/lists/*
 
@@ -16,6 +15,7 @@ COPY pyproject.toml uv.lock* ./
 
 # Install project dependencies
 RUN uv sync --frozen || uv sync
+RUN rm -rf /root/.cache/uv /root/.cache/pip
 
 # Copy app source
 COPY . .
