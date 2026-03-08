@@ -2,26 +2,7 @@
 
 ## Project Overview
 
-Karmafit Frontend is a modern web application built with Next.js and TypeScript that provides an intuitive interface for resume analysis, candidate screening, and recruitment analytics. It displays comprehensive dashboards and detailed candidate reports powered by the GOT-OCR backend.
-
-## Features
-
-- **Dashboard Analytics**: View recruitment metrics including total resumes, strong fits, trainable candidates, and risky fits
-- **Candidate Search**: Search and retrieve detailed information about candidates
-- **Resume Analysis Charts**: Visualize resume processing statistics and candidate classifications
-- **Detailed Reports**: Generate comprehensive candidate reports with strengths, weaknesses, and fit classifications
-- **Responsive Design**: Mobile-friendly interface built with Tailwind CSS
-- **Type-Safe Development**: Full TypeScript support with type checking
-
-## Tech Stack
-
-- **Framework**: Next.js 16.1.6
-- **UI Library**: React 19.2.3
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS 4
-- **Charts & Visualization**: Recharts 3.7.0
-- **Linting**: ESLint 9
-- **Node**: Latest LTS recommended
+Karmafit Frontend is a modern web application built with Next.js and TypeScript that provides an intuitive interface for resume analysis, candidate screening, and recruitment analytics. It displays comprehensive dashboards and detailed candidate reports powered by the advanced deep learning backend.
 
 ## Project Structure
 
@@ -106,6 +87,4 @@ To learn more about the technologies used:
 
 ## Deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out the [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The frontend is hosted on https://dl-cp.vercel.app/ and uses a persistent ngrok url for backend api calls
