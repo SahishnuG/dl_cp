@@ -191,7 +191,6 @@ def strip_latex_markup(text: str) -> str:
     cleaned = re.sub(r'\\', ' ', cleaned)
     # Normalize whitespace.
     cleaned = re.sub(r'\s+', ' ', cleaned).strip()
-    print(f"Cleaned LaTeX text for NER:\n{cleaned[:500]}...")  # Print first 500 chars for debugging
     return cleaned
 
 def ner_on_latex_sections(resume_text):
@@ -293,11 +292,37 @@ def analyze_resume(resume_text, candidate_id):
     latex_resume = is_latex(resume_text)
     if(latex_resume):
         print("Detected LaTeX format.")
-        entities = ner_on_latex_sections(resume_text)
+        sections = parse_latex_sections(resume_text)
+        section_chunks = []
+        entities = []
+
+        for section_name, content in sections.items():
+            heading_label = section_name.replace("_", " ").strip()
+            heading_label = re.sub(r"\s+", " ", heading_label)
+
+            plain_content = strip_latex_markup(content)
+            if not plain_content:
+                continue
+
+            if heading_label and heading_label != "__preamble__":
+                chunk = f"Section heading: {heading_label}. {plain_content}"
+            elif heading_label == "__preamble__":
+                chunk = f"Section heading: Preamble. {plain_content}"
+            else:
+                chunk = plain_content
+
+            print(f"[NER] section={section_name} chars={len(chunk)}")
+            print(f"[NER] chunk preview: {chunk[:500]}...")
+            section_chunks.append(chunk)
+            entities.extend(ner_pipeline(chunk))
+
+        combined_text = "\n".join(section_chunks)
     else:
         print("Detected plain text format.")
-        # Extract entities using NER
-        entities = ner_pipeline(resume_text)
+        combined_text = strip_latex_markup(resume_text)
+        if not combined_text:
+            combined_text = resume_text
+        entities = ner_pipeline(combined_text)
 
     # Extract name: prefer guarded NER first, then fallback to Latex title.
     
@@ -311,7 +336,7 @@ def analyze_resume(resume_text, candidate_id):
     # Extract email using regex
     email = ""
     email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-    email_match = re.search(email_pattern, resume_text)
+    email_match = re.search(email_pattern, combined_text)
     if email_match:
         email = email_match.group(0)
 
@@ -322,7 +347,7 @@ def analyze_resume(resume_text, candidate_id):
         r'(?:experience|exp)[:.]?\s*(\d+)\+?\s*(?:years?|yrs?)?'
     ]
     for pattern in exp_patterns:
-        exp_match = re.search(pattern, resume_text, re.IGNORECASE)
+        exp_match = re.search(pattern, combined_text, re.IGNORECASE)
         if exp_match:
             years = exp_match.group(1)
             experience = f"{years}+ years"
@@ -341,7 +366,7 @@ def analyze_resume(resume_text, candidate_id):
     ]
     
     strengths = []
-    text_lower = resume_text.lower()
+    text_lower = combined_text.lower()
     for skill in tech_keywords:
         if skill in text_lower:
             strengths.append(skill.title())
@@ -356,7 +381,7 @@ def analyze_resume(resume_text, candidate_id):
         r'([A-Z][a-z]+\s+(?:Engineer|Developer|Manager|Analyst|Scientist|Designer|Architect))'
     ]
     for pattern in role_patterns:
-        role_match = re.search(pattern, resume_text)
+        role_match = re.search(pattern, combined_text)
         if role_match:
             position = role_match.group(1)
             break
