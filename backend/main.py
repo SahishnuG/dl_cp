@@ -13,16 +13,18 @@ from urllib import error, request
 from src.helper_funcs import (
     read_resume,
     analyze_resume,
+    clean_extracted_text,
 )
 from src.database import init_db, get_db, Candidate
 
-load_dotenv(find_dotenv(".env"))
+from config.settings import Settings
+settings = Settings()
 
-CLERK_JWKS_URL = os.getenv("CLERK_JWKS_URL", "")
-CLERK_ISSUER = os.getenv("CLERK_ISSUER", "")
-CLERK_AUDIENCE = os.getenv("CLERK_AUDIENCE", "")
-CLERK_SECRET_KEY = os.getenv("CLERK_SECRET_KEY", "")
-CLERK_API_BASE = os.getenv("CLERK_API_BASE", "https://api.clerk.com/v1")
+CLERK_JWKS_URL = settings.clerk_jwks_url
+CLERK_ISSUER = settings.clerk_issuer
+CLERK_AUDIENCE = settings.clerk_audience
+CLERK_SECRET_KEY = settings.clerk_secret_key
+CLERK_API_BASE = settings.clerk_api_base
 
 app = FastAPI(
     title="Karmafit API",
@@ -41,9 +43,29 @@ app.add_middleware(
 
 # Create directories if they don't exist
 RESUMES_DIR = "resumes"
+INTERVIEWS_DIR = "interviews"
+COMPANY_DOCS_DIR = "company_docs"
 OUTPUT_IMAGES_DIR = "output_images"
 os.makedirs(RESUMES_DIR, exist_ok=True)
+os.makedirs(INTERVIEWS_DIR, exist_ok=True)
+os.makedirs(COMPANY_DOCS_DIR, exist_ok=True)
 os.makedirs(OUTPUT_IMAGES_DIR, exist_ok=True)
+
+
+def _company_doc_text_path(user_id: str) -> str:
+    return os.path.join(COMPANY_DOCS_DIR, "current_company_doc.txt")
+
+
+def _company_doc_file_path(extension: str) -> str:
+    return os.path.join(COMPANY_DOCS_DIR, f"current_company_doc{extension}")
+
+
+def _load_global_company_text() -> str:
+    path = _company_doc_text_path("")
+    if not os.path.exists(path):
+        return ""
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read()
 
 
 # Initialize database on startup
@@ -145,6 +167,7 @@ def extract_username_from_user(user: Optional[dict], user_id: str) -> str:
 @app.post("/api/upload-resume")
 async def upload_resume(
     file: UploadFile = File(...),
+    interview_video: Optional[UploadFile] = File(None),
     auth_data: dict = Depends(verify_token),
     db: Session = Depends(get_db),
 ):
@@ -177,9 +200,24 @@ async def upload_resume(
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
+        interview_video_path = None
+        if interview_video and interview_video.filename:
+            video_extension = os.path.splitext(interview_video.filename)[1].lower()
+            allowed_video_extensions = [".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v"]
+            if video_extension not in allowed_video_extensions:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid video type. Allowed: {', '.join(allowed_video_extensions)}",
+                )
+
+            interview_video_path = os.path.join(INTERVIEWS_DIR, f"{candidate_id}{video_extension}")
+            with open(interview_video_path, "wb") as video_buffer:
+                shutil.copyfileobj(interview_video.file, video_buffer)
+
         # Read and analyze resume
         resume_text = read_resume(file_path)
-        analysis = analyze_resume(resume_text, candidate_id)
+        company_text = _load_global_company_text()
+        analysis, processed_resume_text = analyze_resume(resume_text, candidate_id, company_text=company_text)
         
         # Extract name from analysis
         candidate_name = analysis.get("name", "Unknown")
@@ -189,14 +227,14 @@ async def upload_resume(
         if candidate:
             candidate.username = username
             candidate.name = candidate_name
-            candidate.resume_text = resume_text
+            candidate.resume_text = processed_resume_text
             candidate.analysis = analysis
         else:
             candidate = Candidate(
                 candidate_id=candidate_id,
                 username=username,
                 name=candidate_name,
-                resume_text=resume_text,
+                resume_text=processed_resume_text,
                 analysis=analysis
             )
             db.add(candidate)
@@ -207,6 +245,7 @@ async def upload_resume(
         return {
             "message": "Resume uploaded and analyzed successfully",
             "file_path": file_path,
+            "interview_video_path": interview_video_path,
             "analysis": analysis,
         }
 
@@ -272,12 +311,12 @@ async def search_candidates(
         
         return {
             "results": [
-                {
+                ({
                     "candidate_id": c.candidate_id,
                     "username": c.username,
                     "name": c.name,
-                    "analysis": c.analysis
-                }
+                    "analysis": c.analysis,
+                })
                 for c in candidates
             ],
             "count": len(candidates)
@@ -287,6 +326,54 @@ async def search_candidates(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+
+
+@app.post("/api/recruiter/upload-company-document")
+async def upload_company_document(
+    file: UploadFile = File(...),
+):
+    """
+    Upload recruiter company context document.
+    Saves file as company_docs/current_company_doc.<extension> and extracted text as company_docs/current_company_doc.txt
+    """
+    try:
+        file_extension = os.path.splitext(file.filename)[1].lower()
+        allowed_extensions = [".pdf", ".png", ".jpg", ".jpeg", ".bmp", ".webp", ".txt", ".docx"]
+        if file_extension not in allowed_extensions:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid file type. Allowed: {', '.join(allowed_extensions)}",
+            )
+
+        file_path = _company_doc_file_path(file_extension)
+
+        # Ensure only one canonical company doc exists at a time.
+        for existing in os.listdir(COMPANY_DOCS_DIR):
+            if existing.startswith("current_company_doc") and existing != os.path.basename(file_path):
+                try:
+                    os.remove(os.path.join(COMPANY_DOCS_DIR, existing))
+                except Exception:
+                    pass
+
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        extracted_text = read_resume(file_path)
+        extracted_text = clean_extracted_text(extracted_text)
+        text_path = _company_doc_text_path("")
+        with open(text_path, "w", encoding="utf-8") as text_file:
+            text_file.write(extracted_text)
+
+        return {
+            "message": "Company document uploaded successfully",
+            "file_path": file_path,
+            "text_path": text_path,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Company document upload failed: {str(e)}")
 
 
 @app.get("/api/candidates/{candidate_id}/full-analysis")

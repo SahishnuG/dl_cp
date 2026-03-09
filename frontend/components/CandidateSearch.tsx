@@ -181,8 +181,8 @@ export default function CandidateSearch() {
                     </span>
                   </div>
                   
-                  <p className="text-sm text-[var(--foreground-muted)]">
-                    {result.analysis.position || "No position specified"}
+                  <p className="line-clamp-2 text-sm text-[var(--foreground-muted)]">
+                    {result.analysis.explainability || "No explainability summary available"}
                   </p>
                   
                   <div className="mt-3 flex items-center gap-2 text-sm text-[var(--accent)]">

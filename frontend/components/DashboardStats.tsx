@@ -1,8 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import type { MouseEvent } from "react";
+import { useAuth } from "@clerk/nextjs";
 
 export default function DashboardStats() {
+  const { getToken } = useAuth();
+  const [companyDoc, setCompanyDoc] = useState<File | null>(null);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState("");
+
   // Replace with backend API call later
   const data = {
     total: 120,
@@ -15,6 +22,51 @@ export default function DashboardStats() {
     const rect = event.currentTarget.getBoundingClientRect();
     event.currentTarget.style.setProperty("--spot-x", `${event.clientX - rect.left}px`);
     event.currentTarget.style.setProperty("--spot-y", `${event.clientY - rect.top}px`);
+  };
+
+  const handleCompanyDocUpload = async () => {
+    if (!companyDoc) {
+      setUploadMessage("Please select a company document first.");
+      return;
+    }
+
+    setUploadingDoc(true);
+    setUploadMessage("");
+    try {
+      const token = await getToken();
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const formData = new FormData();
+      formData.append("file", companyDoc);
+
+      const headers: Record<string, string> = {
+        Accept: "application/json",
+        "ngrok-skip-browser-warning": "true",
+      };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${apiUrl}/api/recruiter/upload-company-document`, {
+        method: "POST",
+        headers,
+        body: formData,
+      });
+
+      const raw = await response.text();
+      const data = raw ? JSON.parse(raw) : {};
+      if (!response.ok) {
+        throw new Error(data?.detail || "Failed to upload company document");
+      }
+
+      setUploadMessage("Company document uploaded successfully. Workforce alignment will use this document.");
+      setCompanyDoc(null);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Upload failed";
+      setUploadMessage(message);
+    } finally {
+      setUploadingDoc(false);
+    }
   };
 
   return (
@@ -60,6 +112,33 @@ export default function DashboardStats() {
           iconBg="from-rose-500/25 to-rose-500/10"
           setSpotlight={setSpotlight}
         />
+      </div>
+
+      <div className="ui-card mt-8 p-6">
+        <h2 className="mb-2 text-xl font-semibold text-[var(--foreground)]">Company Document</h2>
+        <p className="mb-4 text-sm text-[var(--foreground-muted)]">
+          Upload a company JD/policy document to compute workforce alignment against candidate resumes.
+        </p>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <input
+            type="file"
+            onChange={(e) => setCompanyDoc(e.target.files?.[0] || null)}
+            accept=".pdf,.png,.jpg,.jpeg,.bmp,.webp,.txt,.docx"
+            className="ui-input w-full"
+          />
+          <button
+            onClick={handleCompanyDocUpload}
+            disabled={!companyDoc || uploadingDoc}
+            className="ui-btn-primary px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {uploadingDoc ? "Uploading..." : "Upload Company Doc"}
+          </button>
+        </div>
+
+        {uploadMessage && (
+          <p className="mt-3 text-sm text-[var(--foreground-muted)]">{uploadMessage}</p>
+        )}
       </div>
     </div>
   );

@@ -2,15 +2,14 @@ export interface CandidateProfile {
   id: string;
   name: string;
   email?: string;
-  position?: string;
   experience?: string;
   classification: string;
   score: number;
-  technicalScore?: number;
-  culturalScore?: number;
-  growthPotential?: number;
-  strengths: string[];
-  weaknesses: string[];
+  ethicalScore?: number;
+  integrityRisk?: number;
+  longTermRetention?: number;
+  workforceAlignment?: number;
+  explainability?: string;
 }
 
 function getClassificationColor(classification: string) {
@@ -31,9 +30,10 @@ export default function CandidateReport({ candidate }: { candidate: CandidatePro
 
   const scoreRows = [
     { label: "Overall Score", value: candidate.score, color: "from-[#5e6ad2] to-[#6872d9]" },
-    { label: "Technical Skills", value: candidate.technicalScore, color: "from-blue-500 to-indigo-500" },
-    { label: "Cultural Fit", value: candidate.culturalScore, color: "from-violet-500 to-fuchsia-500" },
-    { label: "Growth Potential", value: candidate.growthPotential, color: "from-emerald-500 to-teal-500" },
+    { label: "Ethical Score", value: candidate.ethicalScore, color: "from-blue-500 to-indigo-500" },
+    { label: "Integrity Risk", value: candidate.integrityRisk, color: "from-rose-500 to-orange-500" },
+    { label: "Long-Term Retention", value: candidate.longTermRetention, color: "from-violet-500 to-fuchsia-500" },
+    { label: "Workforce Alignment", value: candidate.workforceAlignment, color: "from-emerald-500 to-teal-500" },
   ].filter((row): row is { label: string; value: number; color: string } => typeof row.value === "number");
 
   return (
@@ -56,7 +56,6 @@ export default function CandidateReport({ candidate }: { candidate: CandidatePro
 
             <div className="mt-4 flex flex-wrap gap-2 text-sm text-[var(--foreground-muted)]">
               {candidate.email && <span className="ui-badge">📧 {candidate.email}</span>}
-              {candidate.position && <span className="ui-badge">💼 {candidate.position}</span>}
               {candidate.experience && <span className="ui-badge">⏳ {candidate.experience}</span>}
             </div>
           </div>
@@ -79,26 +78,11 @@ export default function CandidateReport({ candidate }: { candidate: CandidatePro
         </div>
       </div>
 
-      <div className="grid gap-6 p-7 sm:grid-cols-2 sm:p-8">
+      <div className="p-7 sm:p-8">
         <div>
-          <h3 className="mb-4 text-lg font-semibold text-[var(--foreground)]">Strengths</h3>
-          <div className="space-y-2">
-            {candidate.strengths.map((strength, i) => (
-              <div key={`${strength}-${i}`} className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
-                {strength}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <h3 className="mb-4 text-lg font-semibold text-[var(--foreground)]">Development Areas</h3>
-          <div className="space-y-2">
-            {candidate.weaknesses.map((weakness, i) => (
-              <div key={`${weakness}-${i}`} className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-300">
-                {weakness}
-              </div>
-            ))}
+          <h3 className="mb-4 text-lg font-semibold text-[var(--foreground)]">Explainability</h3>
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm leading-relaxed text-[var(--foreground-muted)]">
+            {candidate.explainability || "No explainability details available."}
           </div>
         </div>
       </div>

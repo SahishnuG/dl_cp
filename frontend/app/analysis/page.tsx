@@ -8,15 +8,14 @@ import { useRouter } from "next/navigation";
 interface AnalysisData {
   name: string;
   email?: string;
-  position?: string;
   experience?: string;
   classification: string;
   score: number;
-  technicalScore: number;
-  culturalScore: number;
-  growthPotential: number;
-  strengths: string[];
-  weaknesses: string[];
+  ethicalScore: number;
+  integrityRisk: number;
+  longTermRetention: number;
+  workforceAlignment: number;
+  explainability: string;
 }
 
 async function parseJsonSafely<T>(response: Response): Promise<T> {
@@ -191,10 +190,6 @@ export default function AnalysisPage() {
                 <p className="font-semibold text-[var(--foreground)]">{analysis.email || "Not specified"}</p>
               </div>
               <div>
-                <p className="text-sm text-[var(--foreground-muted)]">Position</p>
-                <p className="font-semibold text-[var(--foreground)]">{analysis.position || "Not specified"}</p>
-              </div>
-              <div>
                 <p className="text-sm text-[var(--foreground-muted)]">Experience</p>
                 <p className="font-semibold text-[var(--foreground)]">{analysis.experience || "Not specified"}</p>
               </div>
@@ -225,47 +220,19 @@ export default function AnalysisPage() {
           <section className="ui-card p-6">
             <h3 className="mb-4 text-lg font-semibold text-[var(--foreground)]">Score Breakdown</h3>
             <div className="space-y-4">
-              <MetricRow label="Technical Skills" value={analysis.technicalScore} color="from-blue-500 to-indigo-500" />
-              <MetricRow label="Cultural Fit" value={analysis.culturalScore} color="from-violet-500 to-fuchsia-500" />
-              <MetricRow label="Growth Potential" value={analysis.growthPotential} color="from-emerald-500 to-teal-500" />
+              <MetricRow label="Ethical Score" value={analysis.ethicalScore} color="from-blue-500 to-indigo-500" />
+              <MetricRow label="Integrity Risk" value={analysis.integrityRisk} color="from-rose-500 to-orange-500" />
+              <MetricRow label="Long-Term Retention" value={analysis.longTermRetention} color="from-violet-500 to-fuchsia-500" />
+              <MetricRow label="Workforce Alignment" value={analysis.workforceAlignment} color="from-emerald-500 to-teal-500" />
             </div>
           </section>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-        <section className="ui-card p-6">
-          <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--foreground)]">
-            <span className="text-2xl">💪</span> Strengths
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {analysis.strengths.map((strength: string, index: number) => (
-              <span
-                key={index}
-                className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-sm font-medium text-emerald-300"
-              >
-                {strength}
-              </span>
-            ))}
-          </div>
-        </section>
-
-        <section className="ui-card p-6">
-          <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--foreground)]">
-            <span className="text-2xl">📚</span> Areas for Improvement
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {analysis.weaknesses.map((weakness: string, index: number) => (
-              <span
-                key={index}
-                className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-sm font-medium text-amber-300"
-              >
-                {weakness}
-              </span>
-            ))}
-          </div>
-        </section>
-      </div>
+      <section className="ui-card p-6">
+        <h3 className="mb-4 text-lg font-semibold text-[var(--foreground)]">Explainability</h3>
+        <p className="leading-relaxed text-[var(--foreground-muted)]">{analysis.explainability}</p>
+      </section>
 
       <div className="flex justify-center">
         <button onClick={() => router.push("/upload")} className="ui-btn-primary px-8 py-3 text-sm">

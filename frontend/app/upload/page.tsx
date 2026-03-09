@@ -17,6 +17,7 @@ async function parseJsonSafely<T>(response: Response): Promise<T> {
 
 export default function UploadResume() {
   const [file, setFile] = useState<File | null>(null);
+  const [interviewVideo, setInterviewVideo] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
@@ -49,6 +50,15 @@ export default function UploadResume() {
     "image/webp",
     "text/plain",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ];
+
+  const allowedVideoTypes = [
+    "video/mp4",
+    "video/webm",
+    "video/quicktime",
+    "video/x-msvideo",
+    "video/x-matroska",
+    "video/x-m4v",
   ];
 
   const handleDrag = (e: DragEvent<HTMLDivElement>) => {
@@ -95,6 +105,22 @@ export default function UploadResume() {
     }
   };
 
+  const handleVideoChange = (e: ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    setError("");
+
+    if (e.target.files && e.target.files[0]) {
+      const selectedVideo = e.target.files[0];
+      const extension = selectedVideo.name.split(".").pop()?.toLowerCase() || "";
+      const allowedVideoExtensions = ["mp4", "mov", "avi", "mkv", "webm", "m4v"];
+      if (allowedVideoTypes.includes(selectedVideo.type) || allowedVideoExtensions.includes(extension)) {
+        setInterviewVideo(selectedVideo);
+      } else {
+        setError("Invalid video type. Please upload MP4, MOV, AVI, MKV, WEBM, or M4V files.");
+      }
+    }
+  };
+
   const handleUpload = async () => {
     if (!file) {
       setError("Please select a file first");
@@ -118,6 +144,9 @@ export default function UploadResume() {
 
       const formData = new FormData();
       formData.append("file", file);
+      if (interviewVideo) {
+        formData.append("interview_video", interviewVideo);
+      }
 
       const response = await fetch(`${apiUrl}/api/upload-resume`, {
         method: "POST",
@@ -138,8 +167,14 @@ export default function UploadResume() {
       // Redirect to analysis page after successful upload
       router.push("/analysis");
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Upload failed";
-      setError(message);
+      if (err instanceof TypeError) {
+        setError(
+          `Cannot reach backend API at ${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}. Ensure backend is running and accessible.`
+        );
+      } else {
+        const message = err instanceof Error ? err.message : "Upload failed";
+        setError(message);
+      }
     } finally {
       setUploading(false);
     }
@@ -227,6 +262,42 @@ export default function UploadResume() {
             </div>
           )}
 
+          <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-5">
+            <p className="mb-2 text-sm font-semibold text-[var(--foreground)]">Optional Interview Video</p>
+            <p className="mb-3 text-xs text-[var(--foreground-muted)]">Supported formats: MP4, MOV, AVI, MKV, WEBM, M4V</p>
+
+            <input
+              type="file"
+              id="video-upload"
+              onChange={handleVideoChange}
+              accept=".mp4,.mov,.avi,.mkv,.webm,.m4v,video/mp4,video/webm,video/quicktime,video/x-msvideo,video/x-matroska,video/x-m4v"
+              className="hidden"
+            />
+
+            {interviewVideo ? (
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium text-[var(--foreground)]">{interviewVideo.name}</p>
+                  <p className="text-xs text-[var(--foreground-muted)]">{(interviewVideo.size / 1024 / 1024).toFixed(2)} MB</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setInterviewVideo(null)}
+                  className="text-xs font-medium text-rose-300 transition-colors hover:text-rose-200"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <label
+                htmlFor="video-upload"
+                className="ui-btn-secondary inline-flex cursor-pointer px-4 py-2 text-sm"
+              >
+                Select Video
+              </label>
+            )}
+          </div>
+
           <button
             onClick={handleUpload}
             disabled={!file || uploading}
@@ -271,12 +342,12 @@ export default function UploadResume() {
           <div className="ui-card p-6">
             <div className="mb-3 text-xs font-semibold tracking-[0.18em] text-[var(--foreground-subtle)]">SCORE</div>
             <h3 className="mb-2 font-semibold text-[var(--foreground)]">Detailed Scoring</h3>
-            <p className="text-sm text-[var(--foreground-muted)]">Technical, cultural, and growth potential scores</p>
+            <p className="text-sm text-[var(--foreground-muted)]">Ethical, integrity, retention, and alignment scoring</p>
           </div>
           <div className="ui-card p-6">
             <div className="mb-3 text-xs font-semibold tracking-[0.18em] text-[var(--foreground-subtle)]">MATCH</div>
             <h3 className="mb-2 font-semibold text-[var(--foreground)]">Smart Feedback</h3>
-            <p className="text-sm text-[var(--foreground-muted)]">Strengths, weaknesses, and classifications</p>
+            <p className="text-sm text-[var(--foreground-muted)]">Explainability insights and classification summary</p>
           </div>
         </div>
       </div>
